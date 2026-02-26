@@ -1,32 +1,21 @@
 import { useState, useRef, useEffect } from "react";
 import { auth, googleProvider, db } from "./firebase";
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signInWithPopup,
-  signOut,
-  onAuthStateChanged,
-} from "firebase/auth";
-import {
-  collection,
-  addDoc,
-  getDocs,
-  deleteDoc,
-  doc,
-  query,
-  orderBy,
-  serverTimestamp,
-} from "firebase/firestore";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, signOut, onAuthStateChanged } from "firebase/auth";
+import { collection, addDoc, getDocs, deleteDoc, doc, query, orderBy, serverTimestamp } from "firebase/firestore";
 
-const LANGUAGES = {
-  en: "English",
-  es: "Español",
-  pt: "Português",
-  de: "Deutsch",
-  ru: "Русский",
-  fr: "Français",
-  uk: "Українська",
+const LANGUAGES = { en: "English", es: "Español", pt: "Português", de: "Deutsch", ru: "Русский", fr: "Français", uk: "Українська" };
+
+const PRONOUNS = {
+  es: ["yo", "tú", "él / ella", "nosotros", "vosotros", "ellos / ellas"],
+  pt: ["eu", "tu", "ele / ela", "nós", "vós", "eles / elas"],
+  de: ["ich", "du", "er / sie", "wir", "ihr", "sie / Sie"],
+  fr: ["je", "tu", "il / elle", "nous", "vous", "ils / elles"],
+  ru: ["я", "ты", "он / она", "мы", "вы", "они"],
+  uk: ["я", "ти", "він / вона", "ми", "ви", "вони"],
+  en: ["I", "you", "he / she", "we", "you (pl)", "they"],
 };
+
+const MEANING_COLORS = ["#F7C772", "#B5D3DD", "#9B8EF7", "#6EE7B7", "#F87171"];
 
 const s = {
   container: { maxWidth: 480, margin: "0 auto", padding: 24, fontFamily: "'DM Sans', sans-serif", minHeight: "100vh", background: "#1E1E1E" },
@@ -40,21 +29,27 @@ const s = {
   input: { flex: 1, padding: 14, fontSize: 18, borderRadius: 12, border: "1.5px solid #333", boxSizing: "border-box", background: "#2A2A2A", color: "#F0F0F0", fontFamily: "'DM Sans', sans-serif" },
   btn: { padding: "14px 20px", fontSize: 20, borderRadius: 12, border: "none", background: "#F7C772", color: "#181818", cursor: "pointer", fontWeight: 600 },
   card: { background: "#2A2A2A", borderRadius: 16, padding: 20, marginBottom: 16 },
-  wordTitle: { fontSize: 28, margin: "0 0 16px 0", color: "#F0F0F0" },
-  section: { marginBottom: 16 },
-  label: { fontSize: 12, color: "#888", textTransform: "uppercase", margin: "0 0 8px 0", letterSpacing: "0.06em" },
+  wordTitle: { fontSize: 28, margin: "0 0 4px 0", color: "#F0F0F0", fontFamily: "'DM Serif Display', serif" },
+  wordSub: { fontSize: 14, color: "#888", marginBottom: 16 },
+  section: { marginBottom: 20 },
+  label: { fontSize: 11, color: "#888", textTransform: "uppercase", margin: "0 0 10px 0", letterSpacing: "0.08em", fontWeight: 700 },
   tags: { display: "flex", flexWrap: "wrap", gap: 8 },
-  tag: { background: "#2E3E44", color: "#B5D3DD", padding: "6px 12px", borderRadius: 20, fontSize: 16 },
-  meaning: { fontSize: 16, color: "#CCC", margin: "0 0 4px 0" },
-  example: { fontSize: 14, color: "#888", fontStyle: "italic", margin: 0 },
-  forms: { display: "flex", flexDirection: "column", gap: 6 },
-  formRow: { display: "flex", gap: 12, alignItems: "flex-start" },
-  tense: { color: "#888", fontSize: 13, minWidth: 140 },
-  form: { color: "#F0F0F0", fontSize: 14 },
-  saveBtn: { width: "100%", padding: 12, borderRadius: 10, border: "none", background: "#F7C772", color: "#181818", fontSize: 16, cursor: "pointer", marginTop: 8, fontWeight: 600, fontFamily: "'DM Sans', sans-serif" },
+  tag: { background: "#2E3E44", color: "#B5D3DD", padding: "6px 12px", borderRadius: 20, fontSize: 14 },
+  meaningCard: { borderRadius: 12, padding: 14, marginBottom: 10, borderLeft: "3px solid #F7C772" },
+  meaningTrans: { fontSize: 17, fontWeight: 700, marginBottom: 4 },
+  meaningText: { fontSize: 13, color: "#CCC", marginBottom: 6 },
+  meaningExample: { fontSize: 12, color: "#888", fontStyle: "italic" },
+  tenseTabs: { display: "flex", gap: 6, overflowX: "auto", paddingBottom: 8, marginBottom: 12 },
+  tenseTab: { background: "#2A2A2A", color: "#888", border: "none", borderRadius: 20, padding: "7px 14px", fontSize: 12, fontWeight: 600, fontFamily: "'DM Sans', sans-serif", cursor: "pointer", whiteSpace: "nowrap" },
+  tenseTabActive: { background: "#F7C772", color: "#181818" },
+  conjCard: { background: "#2A2A2A", borderRadius: 12, overflow: "hidden" },
+  conjRow: { display: "flex", padding: "10px 14px", borderBottom: "1px solid #252525" },
+  pronounCol: { color: "#888", fontWeight: 500, width: "45%", fontSize: 14 },
+  formCol: { color: "#F0F0F0", fontWeight: 600, fontSize: 14 },
+  saveBtn: { width: "100%", padding: 14, borderRadius: 12, border: "none", background: "#F7C772", color: "#181818", fontSize: 15, cursor: "pointer", fontWeight: 700, fontFamily: "'DM Sans', sans-serif", marginTop: 8 },
   savedBox: { background: "#2A2A2A", borderRadius: 16, padding: 16, marginBottom: 16 },
   savedTitle: { margin: "0 0 12px 0", fontSize: 16, color: "#F0F0F0" },
-  savedItem: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid #333" },
+  savedItem: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "10px 0", borderBottom: "1px solid #333", flexDirection: "column", gap: 8 },
   savedWord: { fontWeight: "bold", color: "#F0F0F0" },
   savedTrans: { color: "#B5D3DD" },
   backBtn: { background: "none", border: "none", color: "#B5D3DD", cursor: "pointer", fontSize: 14 },
@@ -72,12 +67,6 @@ const s = {
   userBar: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, padding: "10px 16px", background: "#2A2A2A", borderRadius: 12 },
   userEmail: { color: "#888", fontSize: 13 },
   logoutBtn: { background: "none", border: "none", color: "#B5D3DD", fontSize: 13, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" },
-  tensesModal: { position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.8)", zIndex: 1000, display: "flex", alignItems: "flex-end" },
-  tensesSheet: { background: "#1E1E1E", borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxHeight: "80vh", overflowY: "auto" },
-  tensesTitle: { fontSize: 22, fontWeight: 700, color: "#F0F0F0", marginBottom: 4 },
-  tensesTrans: { fontSize: 14, color: "#888", marginBottom: 16 },
-  tensesBtn: { background: "#2E3E44", border: "none", color: "#B5D3DD", fontSize: 12, fontWeight: 600, padding: "5px 10px", borderRadius: 8, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" },
-  closeBtn: { background: "none", border: "none", color: "#888", fontSize: 24, cursor: "pointer", float: "right" },
   tabs: { display: "flex", background: "#252525", borderRadius: 12, padding: 4, gap: 4, marginBottom: 16 },
   tab: { flex: 1, padding: "10px", borderRadius: 10, border: "none", fontSize: 13, fontWeight: 600, fontFamily: "'DM Sans', sans-serif", cursor: "pointer", textAlign: "center" },
   tabActive: { background: "#2A2A2A", color: "#F0F0F0" },
@@ -85,7 +74,54 @@ const s = {
   deleteBtn: { background: "none", border: "none", color: "#ff6b6b", fontSize: 18, cursor: "pointer", padding: "0 4px" },
   historyDate: { fontSize: 11, color: "#555", marginTop: 2 },
   emptyState: { textAlign: "center", color: "#555", padding: "40px 0", fontSize: 15 },
+  tensesModal: { position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.8)", zIndex: 1000, display: "flex", alignItems: "flex-end" },
+  tensesSheet: { background: "#1E1E1E", borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxHeight: "80vh", overflowY: "auto" },
+  tensesBtn: { background: "#2E3E44", border: "none", color: "#B5D3DD", fontSize: 12, fontWeight: 600, padding: "5px 10px", borderRadius: 8, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" },
+  closeBtn: { background: "none", border: "none", color: "#888", fontSize: 24, cursor: "pointer", float: "right" },
 };
+
+// Conjugation table component
+function ConjugationTable({ forms, targetLang }) {
+  const pronouns = PRONOUNS[targetLang] || PRONOUNS.en;
+  const tenseNames = forms ? Object.keys(forms).filter(t => forms[t] && forms[t] !== "-") : [];
+  const [activeTense, setActiveTense] = useState(tenseNames[0] || "");
+
+  if (!forms || tenseNames.length === 0) return null;
+
+  const currentForms = forms[activeTense];
+  // Try to parse conjugation: could be "recibo / recibes / recibe / recibimos / recibís / reciben"
+  let conjugations = [];
+  if (typeof currentForms === "string") {
+    conjugations = currentForms.split(/\s*[\/,]\s*/).map(f => f.trim());
+  } else if (Array.isArray(currentForms)) {
+    conjugations = currentForms;
+  }
+
+  return (
+    <div style={s.section}>
+      <div style={s.label}>Відміна по особах</div>
+      <div style={{...s.tenseTabs, scrollbarWidth: "none"}}>
+        {tenseNames.map(t => (
+          <button key={t} style={{...s.tenseTab, ...(activeTense === t ? s.tenseTabActive : {})}} onClick={() => setActiveTense(t)}>{t}</button>
+        ))}
+      </div>
+      <div style={s.conjCard}>
+        {conjugations.length >= 6 ? (
+          pronouns.map((pronoun, i) => (
+            <div key={i} style={{...s.conjRow, borderBottom: i < 5 ? "1px solid #252525" : "none"}}>
+              <span style={s.pronounCol}>{pronoun}</span>
+              <span style={s.formCol}>{conjugations[i] || "-"}</span>
+            </div>
+          ))
+        ) : (
+          <div style={{...s.conjRow, borderBottom: "none"}}>
+            <span style={{...s.formCol, width: "100%"}}>{currentForms}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -109,10 +145,7 @@ export default function App() {
   const debounceRef = useRef(null);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => {
-      setUser(u);
-      if (u) loadData(u.uid);
-    });
+    const unsub = onAuthStateChanged(auth, (u) => { setUser(u); if (u) loadData(u.uid); });
     return unsub;
   }, []);
 
@@ -148,8 +181,7 @@ export default function App() {
   };
 
   const handleLogout = async () => {
-    await signOut(auth);
-    setStep("target"); setSaved([]); setHistory([]);
+    await signOut(auth); setStep("target"); setSaved([]); setHistory([]);
   };
 
   const handleInput = (value) => {
@@ -176,7 +208,29 @@ export default function App() {
       const response = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_OPENAI_KEY}` },
-        body: JSON.stringify({ model: "gpt-4o-mini", messages: [{ role: "system", content: `You are a dictionary. The user speaks ${LANGUAGES[nativeLang]} and is learning ${LANGUAGES[targetLang]}. Respond in JSON: {"word":"...","translations":["..."],"meanings":[{"meaning":"...","example":"..."}],"forms":{"present simple":"...","present continuous":"...","present perfect":"...","past simple":"...","past continuous":"...","past perfect":"...","future simple":"...","future continuous":"...","future perfect":"..."}}. Only valid JSON. If form doesn't exist use "-".` }, { role: "user", content: word }] }),
+        body: JSON.stringify({ model: "gpt-4o-mini", messages: [{ role: "system", content: `You are a professional translator. The user speaks ${LANGUAGES[nativeLang]} and is learning ${LANGUAGES[targetLang]}.
+
+Translate the given word from ${LANGUAGES[nativeLang]} to ${LANGUAGES[targetLang]}.
+
+Rules:
+1. "word" = original word as given
+2. "translations" = 3-5 translations in ${LANGUAGES[targetLang]} ONLY
+3. "meanings" = array of all different meanings (min 2-3). Each has:
+   - "meaning": explanation in ${LANGUAGES[nativeLang]}
+   - "translation": specific ${LANGUAGES[targetLang]} word for this meaning
+   - "example": example sentence in ${LANGUAGES[targetLang]}
+4. "forms" = verb conjugations in ${LANGUAGES[targetLang]} using NATIVE tense names. For each tense provide all 6 conjugations separated by " / " in order: yo/ich/je/я/я/I, tú/du/tu/ты/ти/you, él/er/il/он/він/he, nosotros/wir/nous/мы/ми/we, vosotros/ihr/vous/вы/ви/you(pl), ellos/sie/ils/они/вони/they.
+   Use native tense names:
+   - Spanish: Presente, Pretérito Indefinido, Pretérito Imperfecto, Pretérito Perfecto, Futuro Simple, Condicional, Imperativo
+   - Portuguese: Presente, Pretérito Perfeito, Pretérito Imperfeito, Futuro, Condicional
+   - German: Präsens, Präteritum, Perfekt, Futur I, Konjunktiv II
+   - French: Présent, Passé Composé, Imparfait, Futur Simple, Conditionnel
+   - Russian: Настоящее, Прошедшее, Будущее, Повелительное
+   - Ukrainian: Теперішній, Минулий, Майбутній, Наказовий
+   - English: Present Simple, Past Simple, Future Simple, Present Continuous, Present Perfect
+   Use "-" if not a verb.
+
+Respond ONLY with valid JSON: {"word":"...","translations":["..."],"meanings":[{"meaning":"...","translation":"...","example":"..."}],"forms":{"[tense]":"conj1 / conj2 / conj3 / conj4 / conj5 / conj6"}}` }, { role: "user", content: word }] }),
       });
       const data = await response.json();
       const parsed = JSON.parse(data.choices[0].message.content);
@@ -287,12 +341,32 @@ export default function App() {
               </div>
             )}
           </div>
+
           {result && !result.error && (
             <div style={s.card}>
-              <h2 style={s.wordTitle}>{result.word}</h2>
-              <div style={s.section}><p style={s.label}>Переклади:</p><div style={s.tags}>{result.translations?.map((t, i) => <span key={i} style={s.tag}>{t}</span>)}</div></div>
-              {result.meanings?.map((m, i) => (<div key={i} style={s.section}><p style={s.label}>Значення {i + 1}:</p><p style={s.meaning}>{m.meaning}</p><p style={s.example}>"{m.example}"</p></div>))}
-              {result.forms && (<div style={s.section}><p style={s.label}>Часи:</p><div style={s.forms}>{Object.entries(result.forms).map(([tense, form]) => form !== "-" && (<div key={tense} style={s.formRow}><span style={s.tense}>{tense}:</span><span style={s.form}>{form}</span></div>))}</div></div>)}
+              <div style={s.wordTitle}>{result.word}</div>
+              <div style={s.wordSub}>{LANGUAGES[nativeLang]} → {LANGUAGES[targetLang]}</div>
+
+              <div style={s.section}>
+                <div style={s.label}>Переклади</div>
+                <div style={s.tags}>{result.translations?.map((t, i) => <span key={i} style={s.tag}>{t}</span>)}</div>
+              </div>
+
+              {result.meanings?.length > 0 && (
+                <div style={s.section}>
+                  <div style={s.label}>Значення</div>
+                  {result.meanings.map((m, i) => (
+                    <div key={i} style={{...s.meaningCard, background: "#252525", borderLeftColor: MEANING_COLORS[i % MEANING_COLORS.length]}}>
+                      <div style={{...s.meaningTrans, color: MEANING_COLORS[i % MEANING_COLORS.length]}}>{m.translation}</div>
+                      <div style={s.meaningText}>{m.meaning}</div>
+                      <div style={s.meaningExample}>"{m.example}"</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <ConjugationTable forms={result.forms} targetLang={targetLang} />
+
               <button style={s.saveBtn} onClick={handleSave}>💾 Зберегти слово</button>
             </div>
           )}
@@ -306,7 +380,7 @@ export default function App() {
           {loadingSaved && <p style={s.emptyState}>Завантаження...</p>}
           {!loadingSaved && saved.length === 0 && <p style={s.emptyState}>Ще немає збережених слів</p>}
           {saved.map((item) => (
-            <div key={item.id} style={{...s.savedItem, flexDirection: "column", alignItems: "flex-start", gap: 8}}>
+            <div key={item.id} style={s.savedItem}>
               <div style={{display: "flex", justifyContent: "space-between", width: "100%", alignItems: "center"}}>
                 <div>
                   <span style={s.savedWord}>{item.word}</span>
@@ -316,38 +390,10 @@ export default function App() {
               </div>
               <div style={{display: "flex", gap: 8, alignItems: "center"}}>
                 <span style={s.historyDate}>{LANGUAGES[item.fromLang]} → {LANGUAGES[item.toLang]}</span>
-                {item.result?.forms && (
-                  <button style={s.tensesBtn} onClick={() => setTensesItem(item)}>📋 Часи</button>
-                )}
+                {item.result?.forms && <button style={s.tensesBtn} onClick={() => setTensesItem(item)}>📋 Часи</button>}
               </div>
             </div>
           ))}
-        </div>
-      )}
-
-      {/* TENSES MODAL */}
-      {tensesItem && (
-        <div style={s.tensesModal} onClick={() => setTensesItem(null)}>
-          <div style={s.tensesSheet} onClick={e => e.stopPropagation()}>
-            <button style={s.closeBtn} onClick={() => setTensesItem(null)}>×</button>
-            <div style={s.tensesTitle}>{tensesItem.word}</div>
-            <div style={s.tensesTrans}>{tensesItem.translation} • {LANGUAGES[tensesItem.fromLang]} → {LANGUAGES[tensesItem.toLang]}</div>
-            {tensesItem.result?.translations && (
-              <div style={{...s.tags, marginBottom: 16}}>
-                {tensesItem.result.translations.map((t, i) => <span key={i} style={s.tag}>{t}</span>)}
-              </div>
-            )}
-            {tensesItem.result?.forms && (
-              <div style={s.forms}>
-                {Object.entries(tensesItem.result.forms).map(([tense, form]) => form !== "-" && (
-                  <div key={tense} style={{...s.formRow, padding: "8px 0", borderBottom: "1px solid #2A2A2A"}}>
-                    <span style={s.tense}>{tense}:</span>
-                    <span style={s.form}>{form}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
         </div>
       )}
 
@@ -357,11 +403,23 @@ export default function App() {
           {loadingSaved && <p style={s.emptyState}>Завантаження...</p>}
           {!loadingSaved && history.length === 0 && <p style={s.emptyState}>Ще немає перекладів</p>}
           {history.map((item) => (
-            <div key={item.id} style={s.savedItem}>
+            <div key={item.id} style={{...s.savedItem, flexDirection: "row", alignItems: "center"}}>
               <div><span style={s.savedWord}>{item.word}</span><div style={s.historyDate}>{formatDate(item.createdAt)} • {LANGUAGES[item.fromLang]} → {LANGUAGES[item.toLang]}</div></div>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}><span style={s.savedTrans}>{item.translation}</span><button style={s.deleteBtn} onClick={() => handleDeleteHistory(item.id)}>×</button></div>
             </div>
           ))}
+        </div>
+      )}
+
+      {tensesItem && (
+        <div style={s.tensesModal} onClick={() => setTensesItem(null)}>
+          <div style={s.tensesSheet} onClick={e => e.stopPropagation()}>
+            <button style={s.closeBtn} onClick={() => setTensesItem(null)}>×</button>
+            <div style={{...s.wordTitle, fontSize: 22}}>{tensesItem.word}</div>
+            <div style={{fontSize: 13, color: "#888", marginBottom: 16}}>{tensesItem.translation} • {LANGUAGES[tensesItem.fromLang]} → {LANGUAGES[tensesItem.toLang]}</div>
+            {tensesItem.result?.translations && <div style={{...s.tags, marginBottom: 16}}>{tensesItem.result.translations.map((t, i) => <span key={i} style={s.tag}>{t}</span>)}</div>}
+            <ConjugationTable forms={tensesItem.result?.forms} targetLang={tensesItem.toLang} />
+          </div>
         </div>
       )}
 
