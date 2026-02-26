@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { auth, googleProvider, db } from "./firebase";
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, signOut, onAuthStateChanged } from "firebase/auth";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from "firebase/auth";
 import { collection, addDoc, getDocs, deleteDoc, doc, query, orderBy, serverTimestamp, getDoc, setDoc } from "firebase/firestore";
 
 const LANGUAGES = { en: "English", es: "Español", pt: "Português", de: "Deutsch", ru: "Русский", fr: "Français", uk: "Українська" };
@@ -296,6 +296,8 @@ export default function App() {
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => { setUser(u); if (u) loadData(u.uid); });
+    // Handle Google redirect result on mobile
+    getRedirectResult(auth).catch(() => {});
     return unsub;
   }, []);
 
@@ -341,8 +343,14 @@ export default function App() {
 
   const handleGoogle = async () => {
     setAuthError("");
-    try { await signInWithPopup(auth, googleProvider); }
-    catch (e) { setAuthError("Помилка входу через Google"); }
+    try {
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      if (isMobile) {
+        await signInWithRedirect(auth, googleProvider);
+      } else {
+        await signInWithPopup(auth, googleProvider);
+      }
+    } catch (e) { setAuthError("Помилка входу через Google"); }
   };
 
   const handleLogout = async () => {
