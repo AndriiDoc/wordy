@@ -311,17 +311,36 @@ export default function App() {
   const [speakingWord, setSpeakingWord] = useState("");
   const debounceRef = useRef(null);
 
-  const speak = (text, lang) => {
-    window.speechSynthesis.cancel();
-    if (speakingWord === text) { setSpeakingWord(""); return; }
-    const langMap = { en: "en-US", es: "es-ES", pt: "pt-PT", de: "de-DE", fr: "fr-FR", ru: "ru-RU", uk: "uk-UA" };
-    const utt = new SpeechSynthesisUtterance(text);
-    utt.lang = langMap[lang] || "en-US";
-    utt.rate = 0.9;
-    utt.onstart = () => setSpeakingWord(text);
-    utt.onend = () => setSpeakingWord("");
-    utt.onerror = () => setSpeakingWord("");
-    window.speechSynthesis.speak(utt);
+  const speak = async (text, lang) => {
+    if (speakingWord === text) {
+      window.speechSynthesis?.cancel();
+      setSpeakingWord("");
+      return;
+    }
+    setSpeakingWord(text);
+    try {
+      const res = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, lang })
+      });
+      if (!res.ok) throw new Error('TTS failed');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audio.onended = () => { setSpeakingWord(""); URL.revokeObjectURL(url); };
+      audio.onerror = () => setSpeakingWord("");
+      audio.play();
+    } catch {
+      // Fallback to browser TTS
+      const langMap = { en: "en-US", es: "es-ES", pt: "pt-PT", de: "de-DE", fr: "fr-FR", ru: "ru-RU", uk: "uk-UA" };
+      const utt = new SpeechSynthesisUtterance(text);
+      utt.lang = langMap[lang] || "en-US";
+      utt.rate = 0.9;
+      utt.onend = () => setSpeakingWord("");
+      utt.onerror = () => setSpeakingWord("");
+      window.speechSynthesis.speak(utt);
+    }
   };
 
   useEffect(() => {
@@ -755,14 +774,20 @@ Respond ONLY valid JSON: {"word":"...","translations":["..."],"meanings":[{"mean
         {/* HISTORY TAB */}
         {activeTab === "history" && (
           <div style={s.listBox}>
-            <div style={s.listTitle}>Історія ({history.length})</div>
-            {loadingSaved && <div style={s.emptyState}>Завантаження...</div>}
-            {!loadingSaved && history.length === 0 && <div style={s.emptyState}>Ще немає перекладів</div>}
+            <div style={s.listTitle}>History ({history.length})</div>
+            {loadingSaved && <div style={s.emptyState}>Loading...</div>}
+            {!loadingSaved && history.length === 0 && <div style={s.emptyState}>No translations yet</div>}
             {history.map((item, idx) => (
               <div key={item.id} style={{ ...s.listItem, borderBottom: idx < history.length - 1 ? `1px solid ${C.border}` : "none" }}>
-                <div style={{ flex: 1 }}>
+                <div style={{ flex: 1, cursor: "pointer" }} onClick={() => {
+                  setWord(item.word);
+                  setNativeLang(item.fromLang);
+                  setTargetLang(item.toLang);
+                  setActiveTab("translate");
+                  setTimeout(handleTranslate, 100);
+                }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
-                    <span style={s.listWord}>{item.word}</span>
+                    <span style={{ ...s.listWord, textDecoration: "none" }}>{item.word}</span>
                     <span style={{ ...T.bodyM, color: C.blue }}>{item.translation}</span>
                   </div>
                   <span style={s.listMeta}>{formatDate(item.createdAt)} · {LANGUAGES[item.fromLang]} → {LANGUAGES[item.toLang]}</span>
