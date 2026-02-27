@@ -5,6 +5,132 @@ import { collection, addDoc, getDocs, deleteDoc, doc, query, orderBy, serverTime
 
 const LANGUAGES = { en: "English", es: "Español", pt: "Português", de: "Deutsch", ru: "Русский", fr: "Français", uk: "Українська" };
 
+
+const I18N = {
+  en: {
+    learnLang: "What language\nare you learning?",
+    learnSub: "Choose the language you want to learn",
+    nativeLang: "What's your\nnative language?",
+    nativeSub: "Choose your native language",
+    translate: "Translate",
+    saved: "Saved",
+    history: "History",
+    placeholder: {t.placeholder},
+    translations: {t.translations2},
+    meanings: "Meanings",
+    conjugation: "Conjugation",
+    saveWord: "Save word",
+    change: "Change",
+    loading: "Loading...",
+    noSaved: "{t.noSaved}",
+    noHistory: "No translations yet",
+    settings: "{t.settings}",
+    signOut: "Sign out",
+    learningLang: "{t.learningLang}",
+    subscription: {t.subscription},
+    freePlan: {t.freePlan},
+    freeDesc: {t.freeDesc},
+    statistics: {t.statistics},
+    savedWords: {t.savedWords},
+    translations2: "Translations",
+    account: {t.account},
+    changePassword: {t.changePassword},
+    deleteAccount: {t.deleteAccount},
+    back: "{t.back}",
+    currentPass: "Current password",
+    newPass: "New password (min. 6 characters)",
+    changePassTitle: {t.changePassword},
+    changePassSub: "{t.changePassSub}",
+    deleteTitle: "Delete account",
+    deleteSub: "{t.deleteSub}",
+    confirmPass: "Enter password to confirm",
+    deleteBtn: "{t.deleteBtn}",
+    tenses: "Tenses",
+  },
+  uk: {
+    learnLang: "Яку мову\nвивчаєш?",
+    learnSub: "Вибери мову для вивчення",
+    nativeLang: "Яка твоя\nрідна мова?",
+    nativeSub: "Вибери свою рідну мову",
+    translate: "Переклад",
+    saved: "Збережені",
+    history: "Історія",
+    placeholder: "Введи слово або фразу...",
+    translations: "Переклади",
+    meanings: "Значення",
+    conjugation: "Відміна",
+    saveWord: "{t.saveWord}",
+    change: "Змінити",
+    loading: "Завантаження...",
+    noSaved: "Ще немає збережених слів",
+    noHistory: "Ще немає перекладів",
+    settings: "⚙️ Налаштування",
+    signOut: "Вийти",
+    learningLang: "Мова навчання",
+    subscription: "Підписка",
+    freePlan: "Безкоштовний план",
+    freeDesc: "30 перекладів/день · 20 збережених слів",
+    statistics: "Статистика",
+    savedWords: "Збережено слів",
+    translations2: "Перекладів",
+    account: "Акаунт",
+    changePassword: "Змінити пароль",
+    deleteAccount: "Видалити акаунт",
+    back: "← Назад",
+    currentPass: "Поточний пароль",
+    newPass: "Новий пароль (мін. 6 символів)",
+    changePassTitle: "Змінити пароль",
+    changePassSub: "Введи поточний і новий пароль",
+    deleteTitle: "Видалити акаунт",
+    deleteSub: "Це незворотня дія. Всі твої дані будуть видалені.",
+    confirmPass: "Введи пароль для підтвердження",
+    deleteBtn: "Видалити акаунт назавжди",
+    tenses: "Часи",
+  },
+  es: {
+    learnLang: "¿Qué idioma\naprendes?",
+    learnSub: "Elige el idioma que quieres aprender",
+    nativeLang: "¿Cuál es tu\nidioma nativo?",
+    nativeSub: "Elige tu idioma nativo",
+    translate: "Traducir",
+    saved: "Guardados",
+    history: "Historial",
+    placeholder: "Escribe una palabra o frase...",
+    translations: "Traducciones",
+    meanings: "Significados",
+    conjugation: "Conjugación",
+    saveWord: "Guardar palabra",
+    change: "Cambiar",
+    loading: "Cargando...",
+    noSaved: "No hay palabras guardadas",
+    noHistory: "No hay traducciones aún",
+    settings: "⚙️ Ajustes",
+    signOut: "Salir",
+    learningLang: "Idioma de aprendizaje",
+    subscription: "Suscripción",
+    freePlan: "Plan gratuito",
+    freeDesc: "30 traducciones/día · 20 palabras guardadas",
+    statistics: "Estadísticas",
+    savedWords: "Palabras guardadas",
+    translations2: "Traducciones",
+    account: "Cuenta",
+    changePassword: "Cambiar contraseña",
+    deleteAccount: "Eliminar cuenta",
+    back: "← Atrás",
+    currentPass: "Contraseña actual",
+    newPass: "Nueva contraseña (mín. 6 caracteres)",
+    changePassTitle: "Cambiar contraseña",
+    changePassSub: "Introduce tu contraseña actual y la nueva",
+    deleteTitle: "Eliminar cuenta",
+    deleteSub: "Esta acción es irreversible. Todos tus datos serán eliminados.",
+    confirmPass: "Introduce la contraseña para confirmar",
+    deleteBtn: "Eliminar cuenta permanentemente",
+    tenses: "Tiempos",
+  },
+};
+// Fallback to English for missing langs
+["pt","de","fr","ru"].forEach(l => { I18N[l] = I18N.en; });
+
 const UI_LANGS = [
   { code: "en", name: "English", flag: "🇬🇧" },
   { code: "uk", name: "Українська", flag: "🇺🇦" },
@@ -255,7 +381,7 @@ function ConjugationTable({ forms, targetLang, word }) {
   return (
     <div style={s.section}>
       <div style={s.sectionLabel}>
-        Відміна — <span style={{ color: C.gold, textTransform: "none", fontStyle: "italic", fontWeight: 600 }}>{word}</span>
+        {t.conjugation} — <span style={{ color: C.gold, textTransform: "none", fontStyle: "italic", fontWeight: 600 }}>{word}</span>
       </div>
       <div style={s.tenseTabs}>
         {tenseNames.map(t => (
@@ -294,6 +420,7 @@ export default function App() {
   const [nativeLang, setNativeLang] = useState("");
   const [uiLang, setUiLang] = useState("en");
   const [showLangPicker, setShowLangPicker] = useState(false);
+  const t = I18N[uiLang] || I18N.en;
   const [word, setWord] = useState("");
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -647,10 +774,10 @@ Respond ONLY valid JSON: {"word":"...","translations":["..."],"meanings":[{"mean
         <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
         <div style={{ marginBottom: 32 }}>
           <div style={{ ...T.display, color: C.text, marginBottom: 8 }}>
-            {step === "target" ? "What language\nare you learning?" : "What's your\nnative language?"}
+            {step === "target" ? t.learnLang : t.nativeLang}
           </div>
           <div style={{ ...T.bodyM, color: C.text2 }}>
-            {step === "target" ? "Choose the language you want to learn" : "Choose your native language"}
+            {step === "target" ? t.learnSub : t.nativeSub}
           </div>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
@@ -689,7 +816,7 @@ Respond ONLY valid JSON: {"word":"...","translations":["..."],"meanings":[{"mean
         </div>
         <div style={s.headerUser}>
           <span>{user.email?.split("@")[0] || user.displayName}</span>
-          <button style={s.logoutBtn} onClick={() => setShowSettings(true)}>⚙️ Settings</button>
+          <button style={s.logoutBtn} onClick={() => setShowSettings(true)}>{t.settings}</button>
         </div>
       </div>
 
@@ -699,7 +826,7 @@ Respond ONLY valid JSON: {"word":"...","translations":["..."],"meanings":[{"mean
           <span style={{ ...T.bodyM, color: C.text }}>{LANGUAGES[nativeLang]}</span>
           <span style={{ color: C.text3 }}>→</span>
           <span style={{ ...T.bodyM, fontWeight: 600, color: C.gold }}>{LANGUAGES[targetLang]}</span>
-          <button style={{ background: "none", border: "none", color: C.text3, cursor: "pointer", marginLeft: "auto", ...T.caption, fontFamily: "'Plus Jakarta Sans', sans-serif" }} onClick={() => setStep("target")}>Change</button>
+          <button style={{ background: "none", border: "none", color: C.text3, cursor: "pointer", marginLeft: "auto", ...T.caption, fontFamily: "'Plus Jakarta Sans', sans-serif" }} onClick={() => setStep("target")}>{t.change}</button>
         </div>
 
         {/* TABS */}
@@ -710,7 +837,7 @@ Respond ONLY valid JSON: {"word":"...","translations":["..."],"meanings":[{"mean
           </button>
           <button style={{ ...s.tab, ...(activeTab === "saved" ? s.tabActive : s.tabInactive) }} onClick={() => setActiveTab("saved")}>
             <span style={{ color: activeTab === "saved" ? C.blue : C.text3 }}><Icons.Bookmark /></span>
-            Збережені {saved.length > 0 && `(${saved.length})`}
+            {t.saved} {saved.length > 0 && `(${saved.length})`}
           </button>
           <button style={{ ...s.tab, ...(activeTab === "history" ? s.tabActive : s.tabInactive) }} onClick={() => setActiveTab("history")}>
             <span style={{ color: activeTab === "history" ? C.blue : C.text3 }}><Icons.History /></span>
@@ -723,7 +850,7 @@ Respond ONLY valid JSON: {"word":"...","translations":["..."],"meanings":[{"mean
           <>
             <div style={s.inputWrapper}>
               <div style={s.inputRow}>
-                <input style={s.input} placeholder="Enter a word or phrase..." value={word} onChange={e => handleInput(e.target.value)} onKeyDown={e => e.key === "Enter" && handleTranslate()} />
+                <input style={s.input} placeholder={t.placeholder} value={word} onChange={e => handleInput(e.target.value)} onKeyDown={e => e.key === "Enter" && handleTranslate()} />
                 <button style={{ ...s.inputBtn, opacity: loading ? 0.7 : 1 }} onClick={handleTranslate} disabled={loading}>
                   {loading ? (
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
@@ -763,7 +890,7 @@ Respond ONLY valid JSON: {"word":"...","translations":["..."],"meanings":[{"mean
                 <div style={s.wordSub}>{LANGUAGES[nativeLang]} → {LANGUAGES[targetLang]}</div>
 
                 <div style={s.section}>
-                  <div style={s.sectionLabel}>Переклади</div>
+                  <div style={s.sectionLabel}>{t.translations}</div>
                   <div style={s.tags}>{result.translations?.map((t, i) => (
                     <span key={i} style={{...s.tag, cursor: "pointer", transition: "all 0.15s"}} onClick={() => { setWord(t); setActiveTab("translate"); setTimeout(() => handleTranslate(), 100); }}>{t}</span>
                   ))}</div>
@@ -771,7 +898,7 @@ Respond ONLY valid JSON: {"word":"...","translations":["..."],"meanings":[{"mean
 
                 {result.meanings?.length > 0 && (
                   <div style={s.section}>
-                    <div style={s.sectionLabel}>Значення</div>
+                    <div style={s.sectionLabel}>{t.meanings}</div>
                     {result.meanings.map((m, i) => (
                       <div key={i} style={{ ...s.meaningCard, borderLeftColor: MEANING_COLORS[i % MEANING_COLORS.length], background: C.surface2 }}>
                         <div style={{ ...s.meaningTrans, color: MEANING_COLORS[i % MEANING_COLORS.length], cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4 }} onClick={() => { setWord(m.translation); setTimeout(handleTranslate, 100); }}>{m.translation} <span style={{fontSize: 12, opacity: 0.7}}>→</span></div>
@@ -784,7 +911,7 @@ Respond ONLY valid JSON: {"word":"...","translations":["..."],"meanings":[{"mean
 
                 <ConjugationTable forms={result.forms} targetLang={targetLang} word={result.translations?.[0] || result.word} />
 
-                <button style={s.saveBtn} onClick={handleSave}><Icons.Save />Зберегти слово</button>
+                <button style={s.saveBtn} onClick={handleSave}><Icons.Save />{t.saveWord}</button>
               </div>
             )}
             {result?.error && <p style={{ color: C.error, textAlign: "center", ...T.bodyM }}>{result.error}</p>}
@@ -811,7 +938,7 @@ Respond ONLY valid JSON: {"word":"...","translations":["..."],"meanings":[{"mean
                     <span style={s.listMeta}>{LANGUAGES[item.fromLang]} → {LANGUAGES[item.toLang]}</span>
                     {item.result?.forms && (
                       <button style={s.tensesBtn} onClick={() => setTensesItem(item)}>
-                        <Icons.Table />Часи
+                        <Icons.Table />{t.tenses}
                       </button>
                     )}
                   </div>
@@ -825,9 +952,9 @@ Respond ONLY valid JSON: {"word":"...","translations":["..."],"meanings":[{"mean
         {/* HISTORY TAB */}
         {activeTab === "history" && (
           <div style={s.listBox}>
-            <div style={s.listTitle}>History ({history.length})</div>
-            {loadingSaved && <div style={s.emptyState}>Loading...</div>}
-            {!loadingSaved && history.length === 0 && <div style={s.emptyState}>No translations yet</div>}
+            <div style={s.listTitle}>{t.history} ({history.length})</div>
+            {loadingSaved && <div style={s.emptyState}>{t.loading}</div>}
+            {!loadingSaved && history.length === 0 && <div style={s.emptyState}>{t.noHistory}</div>}
             {history.map((item, idx) => (
               <div key={item.id} style={{ ...s.listItem, borderBottom: idx < history.length - 1 ? `1px solid ${C.border}` : "none" }}>
                 <div style={{ flex: 1, cursor: "pointer" }} onClick={async () => {
@@ -914,11 +1041,11 @@ Respond ONLY valid JSON: {"word":"...","translations":["..."],"meanings":[{"mean
 
                 {/* PRO status */}
                 <div style={{ background: "linear-gradient(135deg, #2A2010, #1E1A0A)", border: "1px solid #3A2E10", borderRadius: 16, padding: 16, marginBottom: 12 }}>
-                  <div style={{ ...T.overline, color: "#8A6A20", marginBottom: 12 }}>Subscription</div>
+                  <div style={{ ...T.overline, color: "#8A6A20", marginBottom: 12 }}>{t.subscription}</div>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <div>
-                      <div style={{ ...T.bodyL, fontWeight: 700, color: C.gold }}>Free plan</div>
-                      <div style={{ ...T.caption, color: C.text2, marginTop: 2 }}>30 translations/day · 20 saved words</div>
+                      <div style={{ ...T.bodyL, fontWeight: 700, color: C.gold }}>{t.freePlan}</div>
+                      <div style={{ ...T.caption, color: C.text2, marginTop: 2 }}>{t.freeDesc}</div>
                     </div>
                     <button style={{ background: C.gold, border: "none", borderRadius: 10, padding: "8px 14px", ...T.caption, fontWeight: 700, color: "#181818", fontFamily: "'Plus Jakarta Sans', sans-serif", cursor: "pointer" }}>
                       PRO →
@@ -928,7 +1055,7 @@ Respond ONLY valid JSON: {"word":"...","translations":["..."],"meanings":[{"mean
 
                 {/* Stats */}
                 <div style={{ background: C.surface, borderRadius: 16, padding: 16, marginBottom: 12 }}>
-                  <div style={{ ...T.overline, color: C.text3, marginBottom: 14 }}>Statistics</div>
+                  <div style={{ ...T.overline, color: C.text3, marginBottom: 14 }}>{t.statistics}</div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                     <div style={{ background: C.surface2, borderRadius: 12, padding: 14, textAlign: "center" }}>
                       <div style={{ ...T.h1, color: C.gold }}>{saved.length}</div>
@@ -956,7 +1083,7 @@ Respond ONLY valid JSON: {"word":"...","translations":["..."],"meanings":[{"mean
                 </div>
 
                 <button style={{ width: "100%", padding: 14, background: C.surface, borderRadius: 14, border: "none", ...T.bodyL, color: C.text2, fontFamily: "'Plus Jakarta Sans', sans-serif", cursor: "pointer" }} onClick={handleLogout}>
-                  Sign out
+                  {t.signOut}
                 </button>
               </>
             )}
@@ -967,8 +1094,8 @@ Respond ONLY valid JSON: {"word":"...","translations":["..."],"meanings":[{"mean
                 <div style={{ ...T.h2, color: C.text, marginBottom: 4 }}>Change пароль</div>
                 <div style={{ ...T.bodyM, color: C.text2, marginBottom: 20 }}>Enter your current and new password</div>
                 {settingsMsg && <div style={{ ...T.caption, color: settingsMsg.includes("✅") ? "#6EE7B7" : C.error, marginBottom: 12, padding: "10px 14px", background: settingsMsg.includes("✅") ? "rgba(110,231,183,0.1)" : "rgba(248,113,113,0.1)", borderRadius: 10 }}>{settingsMsg}</div>}
-                <input style={s.authInput} type="password" placeholder="Current password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} />
-                <input style={s.authInput} type="password" placeholder="New password (min. 6 characters)" value={newPassword} onChange={e => setNewPassword(e.target.value)} />
+                <input style={s.authInput} type="password" placeholder={t.currentPass} value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} />
+                <input style={s.authInput} type="password" placeholder={t.newPass} value={newPassword} onChange={e => setNewPassword(e.target.value)} />
                 <button style={s.authBtn} onClick={handleChangePassword}>Change пароль</button>
               </div>
             )}
@@ -979,7 +1106,7 @@ Respond ONLY valid JSON: {"word":"...","translations":["..."],"meanings":[{"mean
                 <div style={{ ...T.h2, color: C.error, marginBottom: 4 }}>Delete account</div>
                 <div style={{ ...T.bodyM, color: C.text2, marginBottom: 20 }}>This is irreversible. All your data will be deleted.</div>
                 {settingsMsg && <div style={{ ...T.caption, color: C.error, marginBottom: 12, padding: "10px 14px", background: "rgba(248,113,113,0.1)", borderRadius: 10 }}>{settingsMsg}</div>}
-                <input style={s.authInput} type="password" placeholder="Enter password to confirm" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} />
+                <input style={s.authInput} type="password" placeholder={t.confirmPass} value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} />
                 <button style={{ ...s.authBtn, background: C.error }} onClick={handleDeleteAccount}>Delete account назавжди</button>
               </div>
             )}
