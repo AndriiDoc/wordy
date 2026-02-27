@@ -345,11 +345,20 @@ export default function App() {
   };
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => { setUser(u); if (u) loadData(u.uid); });
-    // Handle Google redirect result
-    getRedirectResult(auth)
-      .then((result) => { if (result?.user) { setUser(result.user); loadData(result.user.uid); } })
-      .catch((e) => { if (e.code !== 'auth/no-auth-event') setAuthError("Google sign-in error: " + e.message); });
+    const unsub = onAuthStateChanged(auth, (u) => { 
+      if (u) { setUser(u); loadData(u.uid); }
+    });
+    // Handle Google redirect result on mobile
+    if (localStorage.getItem('wordy_google_redirect')) {
+      localStorage.removeItem('wordy_google_redirect');
+      getRedirectResult(auth)
+        .then((result) => { 
+          if (result?.user) { setUser(result.user); loadData(result.user.uid); }
+        })
+        .catch((e) => { 
+          if (e.code !== 'auth/no-auth-event') setAuthError("Google error: " + e.code); 
+        });
+    }
     return unsub;
   }, []);
 
@@ -398,6 +407,7 @@ export default function App() {
     try {
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
       if (isMobile) {
+        localStorage.setItem('wordy_google_redirect', '1');
         await signInWithRedirect(auth, googleProvider);
       } else {
         const result = await signInWithPopup(auth, googleProvider);
