@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.wordy.app",
+    "sha256_cert_fingerprints": ["2A:1F:55:8E:F2:8E:D1:55:F5:2C:23:A2:AD:FF:F9:F1:8E:FE:8F:E0:C8:1B:62:46:4A:D5:38:7A:AD:F8:6C:62"]
+  }
+}]
