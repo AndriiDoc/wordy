@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { auth, googleProvider, db } from "./firebase";
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from "firebase/auth";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged, sendPasswordResetEmail, updatePassword, updateProfile, deleteUser, EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
 import { collection, addDoc, getDocs, deleteDoc, doc, query, orderBy, serverTimestamp, getDoc, setDoc } from "firebase/firestore";
 
 const LANGUAGES = { en: "English", es: "Español", pt: "Português", de: "Deutsch", ru: "Русский", fr: "Français", uk: "Українська" };
@@ -39,6 +39,17 @@ const Icons = {
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="3"/>
       <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+    </svg>
+  ),
+  ChevronRight: () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="9 18 15 12 9 6"/>
+    </svg>
+  ),
+  Crown: () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 20h20M5 20V10l7-6 7 6v10"/>
+      <path d="M9 20v-5h6v5"/>
     </svg>
   ),
   Search: () => (
@@ -261,7 +272,9 @@ function ConjugationTable({ forms, targetLang, word }) {
 
 export default function App() {
   const [user, setUser] = useState(null);
-  const [authMode, setAuthMode] = useState("login");
+  const [authMode, setAuthMode] = useState("login"); // login | register | forgot
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetSent, setResetSent] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState("");
@@ -274,6 +287,11 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [activeTab, setActiveTab] = useState("translate");
+  const [showSettings, setShowSettings] = useState(false);
+  const [settingsSection, setSettingsSection] = useState("main"); // main | password | deleteAccount
+  const [newPassword, setNewPassword] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [settingsMsg, setSettingsMsg] = useState("");
   const [saved, setSaved] = useState([]);
   const [history, setHistory] = useState([]);
   const [loadingSaved, setLoadingSaved] = useState(false);
@@ -435,6 +453,37 @@ Respond ONLY valid JSON: {"word":"...","translations":["..."],"meanings":[{"mean
     setWord(""); setResult(null);
   };
 
+  const handleForgotPassword = async () => {
+    if (!resetEmail.trim()) return;
+    try {
+      await sendPasswordResetEmail(auth, resetEmail);
+      setResetSent(true);
+    } catch (e) { setAuthError("Невірний email або акаунт не знайдено"); }
+  };
+
+  const handleChangePassword = async () => {
+    if (!currentPassword || !newPassword) return;
+    setSettingsMsg("");
+    try {
+      const credential = EmailAuthProvider.credential(user.email, currentPassword);
+      await reauthenticateWithCredential(user, credential);
+      await updatePassword(user, newPassword);
+      setSettingsMsg("✅ Пароль змінено!");
+      setCurrentPassword(""); setNewPassword("");
+    } catch (e) { setSettingsMsg("❌ Невірний поточний пароль"); }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!currentPassword) return;
+    setSettingsMsg("");
+    try {
+      const credential = EmailAuthProvider.credential(user.email, currentPassword);
+      await reauthenticateWithCredential(user, credential);
+      await deleteUser(user);
+      setStep("target"); setSaved([]); setHistory([]);
+    } catch (e) { setSettingsMsg("❌ Невірний пароль"); }
+  };
+
   const handleDeleteSaved = async (id) => {
     await deleteDoc(doc(db, "users", user.uid, "saved", id));
     setSaved(prev => prev.filter(i => i.id !== id));
@@ -459,22 +508,49 @@ Respond ONLY valid JSON: {"word":"...","translations":["..."],"meanings":[{"mean
         <div style={{ textAlign: "center" }}>
           <div style={s.authLogoWrap}><Icons.Logo /></div>
           <div style={s.authTitle}>Wordy</div>
-          <div style={s.authSub}>{authMode === "login" ? "Вітаємо назад 👋" : "Створи акаунт безкоштовно"}</div>
+          <div style={s.authSub}>
+            {authMode === "login" ? "Вітаємо назад 👋" : authMode === "register" ? "Створи акаунт безкоштовно" : "Відновлення паролю"}
+          </div>
         </div>
         {authError && <div style={s.errorMsg}>{authError}</div>}
-        <input style={s.authInput} placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} type="email" />
-        <input style={s.authInput} placeholder="Пароль" value={password} onChange={e => setPassword(e.target.value)} type="password" onKeyDown={e => e.key === "Enter" && (authMode === "login" ? handleLogin() : handleRegister())} />
-        <button style={s.authBtn} onClick={authMode === "login" ? handleLogin : handleRegister} disabled={authLoading}>
-          {authLoading ? "⏳" : authMode === "login" ? "Увійти" : "Зареєструватись"}
-        </button>
-        <div style={s.authDivider}><div style={{ flex: 1, height: 1, background: C.border }} />або<div style={{ flex: 1, height: 1, background: C.border }} /></div>
-        <button style={s.authBtnOutline} onClick={handleGoogle}><Icons.Google />Продовжити з Google</button>
-        <div style={s.authSwitch}>
-          {authMode === "login" ? "Немає акаунту? " : "Вже є акаунт? "}
-          <button style={s.authLink} onClick={() => { setAuthMode(authMode === "login" ? "register" : "login"); setAuthError(""); }}>
-            {authMode === "login" ? "Зареєструватись" : "Увійти"}
-          </button>
-        </div>
+        {authMode === "forgot" ? (
+          resetSent ? (
+            <div style={{ textAlign: "center", padding: "20px 0" }}>
+              <div style={{ fontSize: 48, marginBottom: 16 }}>📧</div>
+              <div style={{ ...T.h3, color: C.text, marginBottom: 8 }}>Лист надіслано!</div>
+              <div style={{ ...T.bodyM, color: C.text2, marginBottom: 24 }}>Перевір свій email та перейди за посиланням для відновлення паролю.</div>
+              <button style={s.authBtn} onClick={() => { setAuthMode("login"); setResetSent(false); setResetEmail(""); }}>← Повернутись до входу</button>
+            </div>
+          ) : (
+            <>
+              <div style={{ ...T.bodyM, color: C.text2, marginBottom: 16 }}>Введи свій email і ми надішлемо посилання для відновлення паролю.</div>
+              <input style={s.authInput} placeholder="Email" value={resetEmail} onChange={e => setResetEmail(e.target.value)} type="email" onKeyDown={e => e.key === "Enter" && handleForgotPassword()} />
+              <button style={s.authBtn} onClick={handleForgotPassword}>Надіслати посилання</button>
+              <button style={{ ...s.authBtnOutline, justifyContent: "center" }} onClick={() => { setAuthMode("login"); setAuthError(""); }}>← Назад до входу</button>
+            </>
+          )
+        ) : (
+          <>
+            <input style={s.authInput} placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} type="email" />
+            <input style={s.authInput} placeholder="Пароль" value={password} onChange={e => setPassword(e.target.value)} type="password" onKeyDown={e => e.key === "Enter" && (authMode === "login" ? handleLogin() : handleRegister())} />
+            {authMode === "login" && (
+              <div style={{ textAlign: "right", marginBottom: 12, marginTop: -6 }}>
+                <button style={{ ...s.authLink, fontSize: 13 }} onClick={() => { setAuthMode("forgot"); setResetEmail(email); setAuthError(""); }}>Забув пароль?</button>
+              </div>
+            )}
+            <button style={s.authBtn} onClick={authMode === "login" ? handleLogin : handleRegister} disabled={authLoading}>
+              {authLoading ? "⏳" : authMode === "login" ? "Увійти" : "Зареєструватись"}
+            </button>
+            <div style={s.authDivider}><div style={{ flex: 1, height: 1, background: C.border }} />або<div style={{ flex: 1, height: 1, background: C.border }} /></div>
+            <button style={s.authBtnOutline} onClick={handleGoogle}><Icons.Google />Продовжити з Google</button>
+            <div style={s.authSwitch}>
+              {authMode === "login" ? "Немає акаунту? " : "Вже є акаунт? "}
+              <button style={s.authLink} onClick={() => { setAuthMode(authMode === "login" ? "register" : "login"); setAuthError(""); }}>
+                {authMode === "login" ? "Зареєструватись" : "Увійти"}
+              </button>
+            </div>
+          </>
+        )}
       </div>
     );
   }
@@ -524,7 +600,7 @@ Respond ONLY valid JSON: {"word":"...","translations":["..."],"meanings":[{"mean
         </div>
         <div style={s.headerUser}>
           <span>{user.email?.split("@")[0] || user.displayName}</span>
-          <button style={s.logoutBtn} onClick={handleLogout}>Вийти</button>
+          <button style={s.logoutBtn} onClick={() => setShowSettings(true)}>⚙️ Налаштування</button>
         </div>
       </div>
 
@@ -675,6 +751,117 @@ Respond ONLY valid JSON: {"word":"...","translations":["..."],"meanings":[{"mean
             <div style={{ ...T.bodyM, color: C.text2, marginBottom: 14 }}>{tensesItem.translation} · {LANGUAGES[tensesItem.fromLang]} → {LANGUAGES[tensesItem.toLang]}</div>
             {tensesItem.result?.translations && <div style={{ ...s.tags, marginBottom: 16 }}>{tensesItem.result.translations.map((t, i) => <span key={i} style={s.tag}>{t}</span>)}</div>}
             <ConjugationTable forms={tensesItem.result?.forms} targetLang={tensesItem.toLang} word={tensesItem.translation || tensesItem.word} />
+          </div>
+        </div>
+      )}
+
+      {/* SETTINGS MODAL */}
+      {showSettings && (
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: C.bg, zIndex: 200, overflowY: "auto", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+          <div style={{ maxWidth: 480, margin: "0 auto", padding: "0 20px 40px" }}>
+
+            {/* Settings header */}
+            <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "16px 0 20px" }}>
+              <button style={{ background: "none", border: "none", color: C.text2, cursor: "pointer" }} onClick={() => { setShowSettings(false); setSettingsSection("main"); setSettingsMsg(""); }}>
+                <Icons.Close />
+              </button>
+              <div style={{ ...T.h2, color: C.text }}>Налаштування</div>
+            </div>
+
+            {settingsSection === "main" && (
+              <>
+                {/* Profile */}
+                <div style={{ background: C.surface, borderRadius: 16, padding: 16, marginBottom: 12 }}>
+                  <div style={{ ...T.overline, color: C.text3, marginBottom: 14 }}>Профіль</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 16 }}>
+                    <div style={{ width: 52, height: 52, borderRadius: 16, background: C.gold, display: "flex", alignItems: "center", justifyContent: "center", ...T.h2, color: "#181818" }}>
+                      {(user.displayName || user.email || "?")[0].toUpperCase()}
+                    </div>
+                    <div>
+                      <div style={{ ...T.bodyL, fontWeight: 600, color: C.text }}>{user.displayName || "Користувач"}</div>
+                      <div style={{ ...T.bodyM, color: C.text2 }}>{user.email}</div>
+                    </div>
+                  </div>
+                  <div style={{ background: C.surface2, borderRadius: 12, padding: "12px 14px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div>
+                      <div style={{ ...T.bodyM, fontWeight: 600, color: C.text }}>Мова навчання</div>
+                      <div style={{ ...T.caption, color: C.text2 }}>{LANGUAGES[nativeLang]} → {LANGUAGES[targetLang]}</div>
+                    </div>
+                    <button style={{ background: "none", border: "none", color: C.blue, ...T.bodyM, fontFamily: "'Plus Jakarta Sans', sans-serif", cursor: "pointer" }} onClick={() => { setShowSettings(false); setStep("target"); }}>Змінити</button>
+                  </div>
+                </div>
+
+                {/* PRO status */}
+                <div style={{ background: "linear-gradient(135deg, #2A2010, #1E1A0A)", border: "1px solid #3A2E10", borderRadius: 16, padding: 16, marginBottom: 12 }}>
+                  <div style={{ ...T.overline, color: "#8A6A20", marginBottom: 12 }}>Підписка</div>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div>
+                      <div style={{ ...T.bodyL, fontWeight: 700, color: C.gold }}>Безкоштовний план</div>
+                      <div style={{ ...T.caption, color: C.text2, marginTop: 2 }}>30 перекладів/день · 20 збережених слів</div>
+                    </div>
+                    <button style={{ background: C.gold, border: "none", borderRadius: 10, padding: "8px 14px", ...T.caption, fontWeight: 700, color: "#181818", fontFamily: "'Plus Jakarta Sans', sans-serif", cursor: "pointer" }}>
+                      PRO →
+                    </button>
+                  </div>
+                </div>
+
+                {/* Stats */}
+                <div style={{ background: C.surface, borderRadius: 16, padding: 16, marginBottom: 12 }}>
+                  <div style={{ ...T.overline, color: C.text3, marginBottom: 14 }}>Статистика</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                    <div style={{ background: C.surface2, borderRadius: 12, padding: 14, textAlign: "center" }}>
+                      <div style={{ ...T.h1, color: C.gold }}>{saved.length}</div>
+                      <div style={{ ...T.caption, color: C.text2, marginTop: 2 }}>Збережено слів</div>
+                    </div>
+                    <div style={{ background: C.surface2, borderRadius: 12, padding: 14, textAlign: "center" }}>
+                      <div style={{ ...T.h1, color: C.blue }}>{history.length}</div>
+                      <div style={{ ...T.caption, color: C.text2, marginTop: 2 }}>Перекладів</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div style={{ background: C.surface, borderRadius: 16, overflow: "hidden", marginBottom: 12 }}>
+                  <div style={{ ...T.overline, color: C.text3, padding: "14px 16px 10px" }}>Акаунт</div>
+                  {[
+                    { label: "Змінити пароль", onClick: () => setSettingsSection("password") },
+                    { label: "Видалити акаунт", onClick: () => setSettingsSection("deleteAccount"), danger: true },
+                  ].map((item, i, arr) => (
+                    <button key={i} style={{ width: "100%", padding: "14px 16px", background: "none", border: "none", borderTop: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }} onClick={item.onClick}>
+                      <span style={{ ...T.bodyL, color: item.danger ? C.error : C.text }}>{item.label}</span>
+                      {!item.danger && <span style={{ color: C.text3 }}>›</span>}
+                    </button>
+                  ))}
+                </div>
+
+                <button style={{ width: "100%", padding: 14, background: C.surface, borderRadius: 14, border: "none", ...T.bodyL, color: C.text2, fontFamily: "'Plus Jakarta Sans', sans-serif", cursor: "pointer" }} onClick={handleLogout}>
+                  Вийти з акаунту
+                </button>
+              </>
+            )}
+
+            {settingsSection === "password" && (
+              <div style={{ background: C.surface, borderRadius: 16, padding: 20 }}>
+                <button style={{ background: "none", border: "none", color: C.blue, ...T.bodyM, fontFamily: "'Plus Jakarta Sans', sans-serif", cursor: "pointer", marginBottom: 16 }} onClick={() => setSettingsSection("main")}>← Назад</button>
+                <div style={{ ...T.h2, color: C.text, marginBottom: 4 }}>Змінити пароль</div>
+                <div style={{ ...T.bodyM, color: C.text2, marginBottom: 20 }}>Введи поточний і новий пароль</div>
+                {settingsMsg && <div style={{ ...T.caption, color: settingsMsg.includes("✅") ? "#6EE7B7" : C.error, marginBottom: 12, padding: "10px 14px", background: settingsMsg.includes("✅") ? "rgba(110,231,183,0.1)" : "rgba(248,113,113,0.1)", borderRadius: 10 }}>{settingsMsg}</div>}
+                <input style={s.authInput} type="password" placeholder="Поточний пароль" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} />
+                <input style={s.authInput} type="password" placeholder="Новий пароль (мін. 6 символів)" value={newPassword} onChange={e => setNewPassword(e.target.value)} />
+                <button style={s.authBtn} onClick={handleChangePassword}>Змінити пароль</button>
+              </div>
+            )}
+
+            {settingsSection === "deleteAccount" && (
+              <div style={{ background: C.surface, borderRadius: 16, padding: 20 }}>
+                <button style={{ background: "none", border: "none", color: C.blue, ...T.bodyM, fontFamily: "'Plus Jakarta Sans', sans-serif", cursor: "pointer", marginBottom: 16 }} onClick={() => setSettingsSection("main")}>← Назад</button>
+                <div style={{ ...T.h2, color: C.error, marginBottom: 4 }}>Видалити акаунт</div>
+                <div style={{ ...T.bodyM, color: C.text2, marginBottom: 20 }}>Це незворотня дія. Всі твої дані будуть видалені.</div>
+                {settingsMsg && <div style={{ ...T.caption, color: C.error, marginBottom: 12, padding: "10px 14px", background: "rgba(248,113,113,0.1)", borderRadius: 10 }}>{settingsMsg}</div>}
+                <input style={s.authInput} type="password" placeholder="Введи пароль для підтвердження" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} />
+                <button style={{ ...s.authBtn, background: C.error }} onClick={handleDeleteAccount}>Видалити акаунт назавжди</button>
+              </div>
+            )}
           </div>
         </div>
       )}
