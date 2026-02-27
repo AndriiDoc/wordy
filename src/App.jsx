@@ -73,11 +73,10 @@ const Icons = {
       <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
     </svg>
   ),
-  Logo: ({ size = 28 }) => (
-    <svg width={size} height={size} viewBox="0 0 28 28" fill="none">
-      <rect width="28" height="28" rx="8" fill="#F7C772"/>
-      <text x="4" y="22" fontSize="22" fontWeight="800" fill="#181818" fontFamily="Plus Jakarta Sans, sans-serif">W</text>
-    </svg>
+  Logo: ({ size = 32 }) => (
+    <div style={{ width: size, height: size, background: "#F7C772", borderRadius: Math.round(size * 0.28), display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+      <span style={{ fontSize: size * 0.7, fontWeight: 800, color: "#181818", fontFamily: "Plus Jakarta Sans, sans-serif", lineHeight: 1 }}>W</span>
+    </div>
   ),
   Eye: ({ open }) => <Icon d={open ? ["M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z", "M12 9a3 3 0 100 6 3 3 0 000-6z"] : ["M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24", "M1 1l22 22"]} />,
   Lock: () => <Icon d={["M19 11H5a2 2 0 00-2 2v7a2 2 0 002 2h14a2 2 0 002-2v-7a2 2 0 00-2-2z", "M7 11V7a5 5 0 0110 0v4"]} />,
@@ -411,7 +410,7 @@ function ConjugationTable({ grammar, targetLang }) {
 }
 
 // ─── RESULT CARD ─────────────────────────────────────────────────────────────
-function ResultCard({ result, grammar, grammarLoading, toLang, onSave, onClose, onSpeak, speakingWord, onLoadGrammar, saved }) {
+function ResultCard({ result, grammar, grammarLoading, toLang, onSave, onClose, onSpeak, speakingWord, onLoadGrammar, saved, onAltClick }) {
   const [showGrammar, setShowGrammar] = useState(false);
   const isSaved = saved?.some(s => s.word === result.word && s.toLang === toLang);
 
@@ -441,7 +440,10 @@ function ResultCard({ result, grammar, grammarLoading, toLang, onSave, onClose, 
         {result.alternatives?.length > 0 && (
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 }}>
             {result.alternatives.map((alt, i) => (
-              <span key={i} style={{ ...T.bodyM, background: C.surface2, color: C.text2, padding: "4px 10px", borderRadius: 20, border: `1px solid ${C.border}` }}>{alt}</span>
+              <span key={i} onClick={() => onAltClick && onAltClick(alt)} style={{ ...T.bodyM, background: C.surface2, color: C.blue, padding: "4px 10px", borderRadius: 20, border: `1px solid ${C.border}`, cursor: "pointer", transition: "all 0.15s" }}
+                onMouseEnter={e => { e.currentTarget.style.background = C.surface3; e.currentTarget.style.borderColor = C.blue; }}
+                onMouseLeave={e => { e.currentTarget.style.background = C.surface2; e.currentTarget.style.borderColor = C.border; }}
+              >{alt}</span>
             ))}
           </div>
         )}
@@ -902,7 +904,7 @@ export default function App() {
   // Translate
   const handleTranslate = async (w = word) => {
     if (!w.trim()) { setInputShake(true); setTimeout(() => setInputShake(false), 400); return; }
-    setSuggestions([]);
+    setSuggestions([]); clearTimeout(sugDebounce.current);
     const cacheKey = `tr_${w.trim()}_${nativeLang}_${targetLang}`;
     const cached = getCache(cacheKey);
     if (cached) { setResult(cached); setGrammar(null); return; }
@@ -1110,7 +1112,7 @@ export default function App() {
 
             {/* Result */}
             {result && !result.error && !loading && (
-              <ResultCard result={result} grammar={grammar} grammarLoading={grammarLoading} toLang={targetLang} onSave={handleSave} onClose={() => { setResult(null); setGrammar(null); }} onSpeak={speak} speakingWord={speakingWord} onLoadGrammar={loadGrammar} saved={saved} />
+              <ResultCard result={result} grammar={grammar} grammarLoading={grammarLoading} toLang={targetLang} onSave={handleSave} onClose={() => { setResult(null); setGrammar(null); }} onSpeak={speak} speakingWord={speakingWord} onLoadGrammar={loadGrammar} saved={saved} onAltClick={(alt) => { setWord(alt); handleTranslate(alt); }} />
             )}
           </div>
         )}
