@@ -505,9 +505,20 @@ Respond ONLY valid JSON: {"word":"...","translations":["..."],"meanings":[{"mean
   const handleForgotPassword = async () => {
     if (!resetEmail.trim()) return;
     try {
+      // Send via Firebase (triggers password reset link)
       await sendPasswordResetEmail(auth, resetEmail);
       setResetSent(true);
-    } catch (e) { setAuthError("Invalid email або акаунт не знайдено"); }
+    } catch (e) {
+      // Also try sending via our Resend API
+      try {
+        await fetch('/api/send-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ to: resetEmail, type: 'reset' })
+        });
+        setResetSent(true);
+      } catch { setAuthError("Email not found"); }
+    }
   };
 
   const handleChangePassword = async () => {
