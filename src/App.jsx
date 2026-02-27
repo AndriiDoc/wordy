@@ -311,12 +311,13 @@ export default function App() {
   const [speakingWord, setSpeakingWord] = useState("");
   const debounceRef = useRef(null);
 
+  const audioRef = useRef(null);
+
   const speak = async (text, lang) => {
-    if (speakingWord === text) {
-      window.speechSynthesis?.cancel();
-      setSpeakingWord("");
-      return;
-    }
+    // Stop current audio
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+    window.speechSynthesis?.cancel();
+    if (speakingWord === text) { setSpeakingWord(""); return; }
     setSpeakingWord(text);
     try {
       const res = await fetch('/api/tts', {
@@ -328,11 +329,11 @@ export default function App() {
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const audio = new Audio(url);
-      audio.onended = () => { setSpeakingWord(""); URL.revokeObjectURL(url); };
-      audio.onerror = () => setSpeakingWord("");
+      audioRef.current = audio;
+      audio.onended = () => { setSpeakingWord(""); URL.revokeObjectURL(url); audioRef.current = null; };
+      audio.onerror = () => { setSpeakingWord(""); audioRef.current = null; };
       audio.play();
     } catch {
-      // Fallback to browser TTS
       const langMap = { en: "en-US", es: "es-ES", pt: "pt-PT", de: "de-DE", fr: "fr-FR", ru: "ru-RU", uk: "uk-UA" };
       const utt = new SpeechSynthesisUtterance(text);
       utt.lang = langMap[lang] || "en-US";
@@ -779,12 +780,23 @@ Respond ONLY valid JSON: {"word":"...","translations":["..."],"meanings":[{"mean
             {!loadingSaved && history.length === 0 && <div style={s.emptyState}>No translations yet</div>}
             {history.map((item, idx) => (
               <div key={item.id} style={{ ...s.listItem, borderBottom: idx < history.length - 1 ? `1px solid ${C.border}` : "none" }}>
-                <div style={{ flex: 1, cursor: "pointer" }} onClick={() => {
+                <div style={{ flex: 1, cursor: "pointer" }} onClick={async () => {
                   setWord(item.word);
                   setNativeLang(item.fromLang);
                   setTargetLang(item.toLang);
+                  setResult(null);
                   setActiveTab("translate");
-                  setTimeout(handleTranslate, 100);
+                  setLoading(true);
+                  try {
+                    const r = await fetch("https://api.openai.com/v1/chat/completions", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_OPENAI_KEY}` },
+                      body: JSON.stringify({ model: "gpt-4o", messages: [{ role: "system", content: `You are a professional linguist and translator. The user speaks ${LANGUAGES[item.fromLang]} and is learning ${LANGUAGES[item.toLang]}. Translate the given word. Respond ONLY valid JSON: {"word":"...","translations":["..."],"meanings":[{"meaning":"...","translation":"...","example":"..."}],"forms":{"[tense]":"f1 / f2 / f3 / f4 / f5 / f6"}}` }, { role: "user", content: item.word }] }),
+                    });
+                    const d = await r.json();
+                    setResult(JSON.parse(d.choices[0].message.content));
+                  } catch { setResult({ error: "Error. Please try again." }); }
+                  setLoading(false);
                 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
                     <span style={{ ...s.listWord, textDecoration: "none" }}>{item.word}</span>
