@@ -5,6 +5,16 @@ import { collection, addDoc, getDocs, deleteDoc, doc, query, orderBy, serverTime
 
 const LANGUAGES = { en: "English", es: "Español", pt: "Português", de: "Deutsch", ru: "Русский", fr: "Français", uk: "Українська" };
 
+const UI_LANGS = [
+  { code: "en", name: "English", flag: "🇬🇧" },
+  { code: "uk", name: "Українська", flag: "🇺🇦" },
+  { code: "es", name: "Español", flag: "🇪🇸" },
+  { code: "pt", name: "Português", flag: "🇧🇷" },
+  { code: "de", name: "Deutsch", flag: "🇩🇪" },
+  { code: "fr", name: "Français", flag: "🇫🇷" },
+  { code: "ru", name: "Русский", flag: "🇷🇺" },
+];
+
 const PRONOUNS = {
   es: ["yo", "tú", "él / ella", "nosotros", "vosotros", "ellos / ellas"],
   pt: ["eu", "tu", "ele / ela", "nós", "vós", "eles / elas"],
@@ -282,6 +292,8 @@ export default function App() {
   const [step, setStep] = useState("target");
   const [targetLang, setTargetLang] = useState("");
   const [nativeLang, setNativeLang] = useState("");
+  const [uiLang, setUiLang] = useState("en");
+  const [showLangPicker, setShowLangPicker] = useState(false);
   const [word, setWord] = useState("");
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -347,15 +359,15 @@ export default function App() {
 
   const handleRegister = async () => {
     setAuthError(""); setAuthLoading(true);
-    try { await createUserWithEmailAndPassword(auth, email, password); }
+    try { await createUserWithEmailAndPassword(auth, email, password); if (uiLang) setNativeLang(uiLang); }
     catch (e) { setAuthError(e.message.includes("email") ? "Invalid email" : "Password must be at least 6 characters"); }
     setAuthLoading(false);
   };
 
   const handleLogin = async () => {
     setAuthError(""); setAuthLoading(true);
-    try { await signInWithEmailAndPassword(auth, email, password); }
-    catch (e) { setAuthError("Invalid email або пароль"); }
+    try { await signInWithEmailAndPassword(auth, email, password); if (uiLang) setNativeLang(uiLang); }
+    catch (e) { setAuthError("Invalid email or password"); }
     setAuthLoading(false);
   };
 
@@ -505,6 +517,28 @@ Respond ONLY valid JSON: {"word":"...","translations":["..."],"meanings":[{"mean
     return (
       <div style={s.authPage}>
         <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+        
+        {/* Language selector top right */}
+        <div style={{ position: "fixed", top: 16, right: 16, zIndex: 100 }}>
+          <div style={{ position: "relative" }}>
+            <button 
+              onClick={() => setShowLangPicker(!showLangPicker)}
+              style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10, padding: "7px 12px", color: C.text, ...T.bodyM, fontFamily: "'Plus Jakarta Sans', sans-serif", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}
+            >
+              {UI_LANGS.find(l => l.code === uiLang)?.flag} {UI_LANGS.find(l => l.code === uiLang)?.name}
+              <span style={{ fontSize: 10, color: C.text3 }}>▼</span>
+            </button>
+            {showLangPicker && (
+              <div style={{ position: "absolute", top: "calc(100% + 4px)", right: 0, background: C.surface2, borderRadius: 12, overflow: "hidden", boxShadow: "0 8px 24px rgba(0,0,0,0.4)", minWidth: 140, zIndex: 200 }}>
+                {UI_LANGS.map(l => (
+                  <button key={l.code} onClick={() => { setUiLang(l.code); setNativeLang(l.code); setShowLangPicker(false); }} style={{ width: "100%", padding: "11px 14px", background: uiLang === l.code ? C.surface : "none", border: "none", color: C.text, ...T.bodyM, fontFamily: "'Plus Jakarta Sans', sans-serif", cursor: "pointer", display: "flex", alignItems: "center", gap: 8, borderBottom: `1px solid ${C.border}` }}>
+                    <span>{l.flag}</span> {l.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
         <div style={{ textAlign: "center" }}>
           <div style={s.authLogoWrap}><Icons.Logo /></div>
           <div style={s.authTitle}>Wordy</div>
