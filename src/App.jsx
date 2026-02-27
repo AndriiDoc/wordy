@@ -346,8 +346,10 @@ export default function App() {
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => { setUser(u); if (u) loadData(u.uid); });
-    // Handle Google redirect result on mobile
-    getRedirectResult(auth).catch(() => {});
+    // Handle Google redirect result
+    getRedirectResult(auth)
+      .then((result) => { if (result?.user) { setUser(result.user); loadData(result.user.uid); } })
+      .catch((e) => { if (e.code !== 'auth/no-auth-event') setAuthError("Google sign-in error: " + e.message); });
     return unsub;
   }, []);
 
