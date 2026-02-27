@@ -492,19 +492,24 @@ export default function App() {
   const loadData = async (uid) => {
     setLoadingSaved(true);
     try {
-      // Load language preferences first (fast)
+      // Load language preferences (fast from cache)
       const cached = localStorage.getItem(`wordy_langs_${uid}`);
       if (cached) {
         const { native, target } = JSON.parse(cached);
         if (native && target) { setNativeLang(native); setTargetLang(target); setStep("main"); }
+        else { setNativeLang(uiLang || "en"); setStep("target"); }
       }
       const prefDoc = await getDoc(doc(db, "users", uid, "settings", "langs"));
       if (prefDoc.exists()) {
         const { native, target } = prefDoc.data();
         setNativeLang(native); setTargetLang(target); setStep("main");
         localStorage.setItem(`wordy_langs_${uid}`, JSON.stringify({ native, target }));
+      } else if (!cached) {
+        // New user — use uiLang as native, ask only for target lang
+        setNativeLang(uiLang || "en");
+        setStep("target");
       }
-      // Load saved and history in parallel (faster)
+      // Load saved and history in parallel
       const [savedSnap, historySnap] = await Promise.all([
         getDocs(query(collection(db, "users", uid, "saved"), orderBy("createdAt", "desc"))),
         getDocs(query(collection(db, "users", uid, "history"), orderBy("createdAt", "desc"))),
@@ -548,10 +553,9 @@ export default function App() {
   };
 
   const handleLogout = async () => {
-    await signOut(auth);
-    setStep("auth");
-    setSaved([]); setHistory([]);
     if (user) localStorage.removeItem(`wordy_langs_${user.uid}`);
+    setSaved([]); setHistory([]); setStep("target");
+    await signOut(auth);
   };
 
   const handleInput = (value) => {
@@ -767,29 +771,25 @@ Respond ONLY valid JSON: {"word":"...","translations":["..."],"meanings":[{"mean
   }
 
   // LANG SELECT
-  if (step === "target" || step === "native") {
+  if (step === "target") {
     const LANG_FLAGS = { en: "🇬🇧", es: "🇪🇸", pt: "🇧🇷", de: "🇩🇪", ru: "🇷🇺", fr: "🇫🇷", uk: "🇺🇦" };
     return (
       <div style={{ ...s.page, display: "flex", flexDirection: "column", justifyContent: "center", minHeight: "100vh", padding: "0 24px" }}>
         <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
         <div style={{ marginBottom: 32 }}>
-          <div style={{ ...T.display, color: C.text, marginBottom: 8 }}>
-            {step === "target" ? t.learnLang : t.nativeLang}
-          </div>
-          <div style={{ ...T.bodyM, color: C.text2 }}>
-            {step === "target" ? t.learnSub : t.nativeSub}
-          </div>
+          <div style={{ ...T.display, color: C.text, marginBottom: 8, whiteSpace: "pre-line" }}>{t.learnLang}</div>
+          <div style={{ ...T.bodyM, color: C.text2 }}>{t.learnSub}</div>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           {Object.entries(LANGUAGES).map(([code, name]) => (
             <button key={code} style={{ padding: "18px 16px", borderRadius: 16, border: `1.5px solid ${C.border}`, background: C.surface, color: C.text, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif", textAlign: "left", transition: "all 0.15s", display: "flex", alignItems: "center", gap: 12 }} onClick={() => {
-              if (step === "target") { setTargetLang(code); setStep("native"); }
-              else {
-                setNativeLang(code); setStep("main");
-                if (user) {
-                  setDoc(doc(db, "users", user.uid, "settings", "langs"), { native: code, target: targetLang });
-                  localStorage.setItem(`wordy_langs_${user.uid}`, JSON.stringify({ native: code, target: targetLang }));
-                }
+              const native = nativeLang || uiLang || "en";
+              setTargetLang(code);
+              setNativeLang(native);
+              setStep("main");
+              if (user) {
+                setDoc(doc(db, "users", user.uid, "settings", "langs"), { native, target: code });
+                localStorage.setItem(`wordy_langs_${user.uid}`, JSON.stringify({ native, target: code }));
               }
             }}>
               <span style={{ fontSize: 28 }}>{LANG_FLAGS[code]}</span>
