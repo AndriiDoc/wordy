@@ -421,7 +421,9 @@ export default function App() {
   };
 
   const handleLogout = async () => {
-    await signOut(auth); setStep("target"); setSaved([]); setHistory([]);
+    await signOut(auth);
+    setStep("auth");
+    setSaved([]); setHistory([]);
     if (user) localStorage.removeItem(`wordy_langs_${user.uid}`);
   };
 
@@ -639,28 +641,33 @@ Respond ONLY valid JSON: {"word":"...","translations":["..."],"meanings":[{"mean
 
   // LANG SELECT
   if (step === "target" || step === "native") {
+    const LANG_FLAGS = { en: "🇬🇧", es: "🇪🇸", pt: "🇧🇷", de: "🇩🇪", ru: "🇷🇺", fr: "🇫🇷", uk: "🇺🇦" };
     return (
-      <div style={{ ...s.page, padding: "24px 20px" }}>
+      <div style={{ ...s.page, display: "flex", flexDirection: "column", justifyContent: "center", minHeight: "100vh", padding: "0 24px" }}>
         <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
-        <div style={{ ...T.h1, color: C.text, marginBottom: 4 }}>
-          {step === "target" ? "Яку мову вивчаєш?" : "Яка твоя мова?"}
+        <div style={{ marginBottom: 32 }}>
+          <div style={{ ...T.display, color: C.text, marginBottom: 8 }}>
+            {step === "target" ? "What language\nare you learning?" : "What's your\nnative language?"}
+          </div>
+          <div style={{ ...T.bodyM, color: C.text2 }}>
+            {step === "target" ? "Choose the language you want to learn" : "Choose your native language"}
+          </div>
         </div>
-        <div style={{ ...T.bodyM, color: C.text2, marginBottom: 20 }}>
-          {step === "target" ? "Вибери мову для вивчення" : "Мова на якій ти говориш"}
-        </div>
-        <div style={s.langGrid}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           {Object.entries(LANGUAGES).map(([code, name]) => (
-            <button key={code} style={s.langBtn} onClick={() => {
+            <button key={code} style={{ padding: "18px 16px", borderRadius: 16, border: `1.5px solid ${C.border}`, background: C.surface, color: C.text, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif", textAlign: "left", transition: "all 0.15s", display: "flex", alignItems: "center", gap: 12 }} onClick={() => {
               if (step === "target") { setTargetLang(code); setStep("native"); }
               else {
                 setNativeLang(code); setStep("main");
-                // Save to Firebase
                 if (user) {
                   setDoc(doc(db, "users", user.uid, "settings", "langs"), { native: code, target: targetLang });
                   localStorage.setItem(`wordy_langs_${user.uid}`, JSON.stringify({ native: code, target: targetLang }));
                 }
               }
-            }}>{name}</button>
+            }}>
+              <span style={{ fontSize: 28 }}>{LANG_FLAGS[code]}</span>
+              <span style={{ ...T.bodyL, fontWeight: 600 }}>{name}</span>
+            </button>
           ))}
         </div>
       </div>
@@ -716,9 +723,15 @@ Respond ONLY valid JSON: {"word":"...","translations":["..."],"meanings":[{"mean
           <>
             <div style={s.inputWrapper}>
               <div style={s.inputRow}>
-                <input style={s.input} placeholder="Введи слово або фразу..." value={word} onChange={e => handleInput(e.target.value)} onKeyDown={e => e.key === "Enter" && handleTranslate()} />
-                <button style={s.inputBtn} onClick={handleTranslate} disabled={loading}>
-                  {loading ? <span style={{ fontSize: 20 }}>⏳</span> : <Icons.Arrow />}
+                <input style={s.input} placeholder="Enter a word or phrase..." value={word} onChange={e => handleInput(e.target.value)} onKeyDown={e => e.key === "Enter" && handleTranslate()} />
+                <button style={{ ...s.inputBtn, opacity: loading ? 0.7 : 1 }} onClick={handleTranslate} disabled={loading}>
+                  {loading ? (
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                      <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83">
+                        <animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="0.8s" repeatCount="indefinite"/>
+                      </path>
+                    </svg>
+                  ) : <Icons.Arrow />}
                 </button>
               </div>
               {suggestions.length > 0 && (
@@ -729,6 +742,15 @@ Respond ONLY valid JSON: {"word":"...","translations":["..."],"meanings":[{"mean
                 </div>
               )}
             </div>
+
+            {loading && (
+              <div style={{ ...s.resultCard, overflow: "hidden" }}>
+                <style>{`@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}`}</style>
+                {[80, 120, 60, 100, 140].map((w, i) => (
+                  <div key={i} style={{ height: i === 0 ? 28 : 16, width: `${w}%`, maxWidth: w + "%", borderRadius: 8, marginBottom: 12, background: "linear-gradient(90deg, #2E2E2E 25%, #3A3A3A 50%, #2E2E2E 75%)", backgroundSize: "200% 100%", animation: "shimmer 1.2s infinite" }} />
+                ))}
+              </div>
+            )}
 
             {result && !result.error && (
               <div style={s.resultCard}>
