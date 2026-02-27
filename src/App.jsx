@@ -73,8 +73,9 @@ const Icons = {
       <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
     </svg>
   ),
-  Logo: () => (
-    <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+  Logo: ({ size = 28 }) => (
+    <svg width={size} height={size} viewBox="0 0 28 28" fill="none">
+      <rect width="28" height="28" rx="8" fill="#F7C772"/>
       <text x="4" y="22" fontSize="22" fontWeight="800" fill="#181818" fontFamily="Plus Jakarta Sans, sans-serif">W</text>
     </svg>
   ),
@@ -716,6 +717,78 @@ function SettingsScreen({ user, onClose, onLogout, onDeleteAccount, saved, histo
   );
 }
 
+// ─── LANG BAR ────────────────────────────────────────────────────────────────
+function LangBar({ nativeLang, targetLang, onSwap, onChangeNative, onChangeTarget }) {
+  const [showFrom, setShowFrom] = useState(false);
+  const [showTo, setShowTo] = useState(false);
+
+  const LangDropdown = ({ value, onChange, onClose }) => (
+    <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, right: 0, background: C.surface2, borderRadius: 14, overflow: "hidden", boxShadow: "0 12px 32px rgba(0,0,0,0.5)", zIndex: 200 }} className="fade-in">
+      {Object.entries(LANGUAGES).map(([code, { name, flag }]) => (
+        <button key={code} onClick={() => { onChange(code); onClose(); }} style={{ width: "100%", padding: "12px 16px", background: value === code ? C.surface3 : "none", border: "none", borderBottom: `1px solid ${C.border}`, color: C.text, fontSize: 14, fontFamily: "inherit", cursor: "pointer", display: "flex", alignItems: "center", gap: 10, transition: "background 0.1s" }}>
+          <span style={{ fontSize: 20 }}>{flag}</span>
+          <span style={{ fontWeight: value === code ? 700 : 400 }}>{name}</span>
+          {value === code && <span style={{ marginLeft: "auto", color: C.gold, fontSize: 16 }}>✓</span>}
+        </button>
+      ))}
+    </div>
+  );
+
+  return (
+    <div style={{ padding: "8px 16px", flexShrink: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, background: C.surface, borderRadius: 14, padding: "8px 10px" }}>
+        {/* From lang */}
+        <div style={{ flex: 1, position: "relative" }}>
+          <button onClick={() => { setShowFrom(!showFrom); setShowTo(false); }} style={{ width: "100%", background: "none", border: "none", cursor: "pointer", textAlign: "center", padding: "6px 4px", borderRadius: 10, fontFamily: "inherit", transition: "background 0.15s" }}
+            onMouseEnter={e => e.currentTarget.style.background = C.surface2}
+            onMouseLeave={e => e.currentTarget.style.background = "none"}
+          >
+            <div style={{ ...T.caption, color: C.text3, marginBottom: 2 }}>From</div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+              <span style={{ fontSize: 18 }}>{LANGUAGES[nativeLang]?.flag}</span>
+              <span style={{ ...T.h3, color: C.text }}>{LANGUAGES[nativeLang]?.name}</span>
+              <Icons.ChevronDown />
+            </div>
+          </button>
+          {showFrom && (
+            <>
+              <div style={{ position: "fixed", inset: 0, zIndex: 199 }} onClick={() => setShowFrom(false)} />
+              <LangDropdown value={nativeLang} onChange={onChangeNative} onClose={() => setShowFrom(false)} />
+            </>
+          )}
+        </div>
+
+        {/* Swap */}
+        <button onClick={() => { onSwap(); setShowFrom(false); setShowTo(false); }} style={{ background: C.surface2, border: "none", borderRadius: 10, padding: 8, cursor: "pointer", color: C.gold, transition: "transform 0.3s", flexShrink: 0 }}
+          onMouseEnter={e => e.currentTarget.style.transform = "rotate(180deg)"}
+          onMouseLeave={e => e.currentTarget.style.transform = "rotate(0deg)"}
+        ><Icons.Swap /></button>
+
+        {/* To lang */}
+        <div style={{ flex: 1, position: "relative" }}>
+          <button onClick={() => { setShowTo(!showTo); setShowFrom(false); }} style={{ width: "100%", background: "none", border: "none", cursor: "pointer", textAlign: "center", padding: "6px 4px", borderRadius: 10, fontFamily: "inherit", transition: "background 0.15s" }}
+            onMouseEnter={e => e.currentTarget.style.background = C.surface2}
+            onMouseLeave={e => e.currentTarget.style.background = "none"}
+          >
+            <div style={{ ...T.caption, color: C.text3, marginBottom: 2 }}>To</div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+              <span style={{ fontSize: 18 }}>{LANGUAGES[targetLang]?.flag}</span>
+              <span style={{ ...T.h3, color: C.text }}>{LANGUAGES[targetLang]?.name}</span>
+              <Icons.ChevronDown />
+            </div>
+          </button>
+          {showTo && (
+            <>
+              <div style={{ position: "fixed", inset: 0, zIndex: 199 }} onClick={() => setShowTo(false)} />
+              <LangDropdown value={targetLang} onChange={onChangeTarget} onClose={() => setShowTo(false)} />
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── MAIN APP ────────────────────────────────────────────────────────────────
 export default function App() {
   const [user, setUser] = useState(null);
@@ -839,6 +912,15 @@ export default function App() {
       const d = await r.json();
       if (d.error) { setResult({ error: d.error }); } else {
         setResult(d); setCache(cacheKey, d);
+        // Load grammar in background (parallel)
+        const grammarKey = `grammar_${w.trim()}_${targetLang}`;
+        const cachedGrammar = getCache(grammarKey);
+        if (cachedGrammar) { setGrammar(cachedGrammar); }
+        else {
+          setGrammarLoading(true);
+          fetch("/api/grammar", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ word: w.trim(), translation: d.main, toLang: targetLang }) })
+            .then(r => r.json()).then(g => { setGrammar(g); setCache(grammarKey, g); }).catch(() => {}).finally(() => setGrammarLoading(false));
+        }
         // Save to history
         if (user) {
           const item = { word: w.trim(), translation: d.main, fromLang: nativeLang, toLang: targetLang, result: d, createdAt: serverTimestamp() };
@@ -872,15 +954,11 @@ export default function App() {
     } catch {} finally { setGrammarLoading(false); }
   };
 
-  // Save word
+  // Save word — only saves, never deletes on repeated click
   const handleSave = async () => {
     if (!result || !user) return;
     const already = saved.find(s => s.word === word && s.toLang === targetLang);
-    if (already) {
-      await deleteDoc(doc(db, "users", user.uid, "saved", already.id));
-      setSaved(prev => prev.filter(s => s.id !== already.id));
-      return;
-    }
+    if (already) return;
     const item = { word, translation: result.main, fromLang: nativeLang, toLang: targetLang, result, createdAt: serverTimestamp() };
     const ref = await addDoc(collection(db, "users", user.uid, "saved"), item);
     setSaved(prev => [{ id: ref.id, ...item, createdAt: new Date() }, ...prev]);
@@ -965,29 +1043,14 @@ export default function App() {
       {/* Header */}
       <div style={{ padding: "12px 16px 0", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{ width: 32, height: 32, background: C.gold, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center" }}><Icons.Logo /></div>
+          <Icons.Logo size={32} />
           <span style={{ ...T.h2, color: C.text }}>Wordy</span>
         </div>
         <button onClick={() => setShowSettings(true)} style={{ background: "none", border: "none", color: C.text2, cursor: "pointer", padding: 6 }}><Icons.Settings /></button>
       </div>
 
       {/* Language bar */}
-      <div style={{ padding: "12px 16px 8px", flexShrink: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, background: C.surface, borderRadius: 14, padding: "10px 14px" }}>
-          <div style={{ flex: 1, textAlign: "center" }}>
-            <div style={{ ...T.caption, color: C.text3, marginBottom: 2 }}>From</div>
-            <div style={{ ...T.h3, color: C.text }}>{LANGUAGES[nativeLang]?.flag} {LANGUAGES[nativeLang]?.name}</div>
-          </div>
-          <button onClick={handleSwapLangs} style={{ background: C.surface2, border: "none", borderRadius: 10, padding: 8, cursor: "pointer", color: C.gold, transition: "transform 0.2s" }}
-            onMouseEnter={e => e.currentTarget.style.transform = "rotate(180deg)"}
-            onMouseLeave={e => e.currentTarget.style.transform = "rotate(0deg)"}
-          ><Icons.Swap /></button>
-          <div style={{ flex: 1, textAlign: "center" }}>
-            <div style={{ ...T.caption, color: C.text3, marginBottom: 2 }}>To</div>
-            <div style={{ ...T.h3, color: C.text }}>{LANGUAGES[targetLang]?.flag} {LANGUAGES[targetLang]?.name}</div>
-          </div>
-        </div>
-      </div>
+      <LangBar nativeLang={nativeLang} targetLang={targetLang} onSwap={handleSwapLangs} onChangeNative={setNativeLang} onChangeTarget={setTargetLang} />
 
       {/* Content */}
       <div style={{ flex: 1, overflowY: "auto", padding: "0 16px" }}>
@@ -1004,7 +1067,7 @@ export default function App() {
                     placeholder="Enter a word or phrase..."
                     value={word}
                     onChange={e => handleInput(e.target.value)}
-                    onKeyDown={e => e.key === "Enter" && handleTranslate()}
+                    onKeyDown={e => e.key === "Enter" && handleTranslate()} onBlur={() => setTimeout(() => setSuggestions([]), 150)}
                     onFocus={e => e.target.style.borderColor = C.gold}
                     onBlur={e => e.target.style.borderColor = C.border}
                   />
