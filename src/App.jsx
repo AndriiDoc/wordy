@@ -394,12 +394,7 @@ export default function App() {
   const handleGoogle = async () => {
     setAuthError("");
     try {
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      if (isMobile) {
-        await signInWithRedirect(auth, googleProvider);
-      } else {
-        await signInWithPopup(auth, googleProvider);
-      }
+      await signInWithRedirect(auth, googleProvider);
     } catch (e) { setAuthError("Google sign-in error"); }
   };
 
@@ -538,8 +533,8 @@ Respond ONLY valid JSON: {"word":"...","translations":["..."],"meanings":[{"mean
       <div style={s.authPage}>
         <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
         
-        {/* Language selector top right */}
-        <div style={{ position: "fixed", top: 16, right: 16, zIndex: 100 }}>
+        {/* Language selector */}
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 24 }}>
           <div style={{ position: "relative" }}>
             <button 
               onClick={() => setShowLangPicker(!showLangPicker)}
