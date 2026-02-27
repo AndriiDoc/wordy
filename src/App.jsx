@@ -396,8 +396,18 @@ export default function App() {
   const handleGoogle = async () => {
     setAuthError("");
     try {
-      await signInWithRedirect(auth, googleProvider);
-    } catch (e) { setAuthError("Google sign-in error"); }
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      if (isMobile) {
+        await signInWithRedirect(auth, googleProvider);
+      } else {
+        const result = await signInWithPopup(auth, googleProvider);
+        if (result?.user) { setUser(result.user); loadData(result.user.uid); }
+      }
+    } catch (e) {
+      if (e.code !== 'auth/popup-closed-by-user') {
+        setAuthError("Google sign-in error: " + e.code);
+      }
+    }
   };
 
   const handleLogout = async () => {
