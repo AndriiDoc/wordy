@@ -188,7 +188,7 @@ function AuthScreen({ onAuth }) {
   };
 
   const s = {
-    page: { minHeight: "100vh", minHeight: "100dvh", background: C.bg, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "24px 20px", position: "relative" },
+    page: { minHeight: "100vh", minHeight: "100dvh", background: C.bg, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "24px 20px", paddingTop: "max(24px, env(safe-area-inset-top))", position: "relative" },
     card: { width: "100%", maxWidth: 380 },
     input: { width: "100%", background: C.surface, border: `1.5px solid ${C.border}`, borderRadius: 14, padding: "14px 16px", color: C.text, fontSize: 15, outline: "none", marginBottom: 10, transition: "border-color 0.15s" },
     btn: { width: "100%", padding: "15px", background: C.gold, border: "none", borderRadius: 14, color: "#181818", fontSize: 15, fontWeight: 700, cursor: "pointer", marginBottom: 10, transition: "opacity 0.15s", fontFamily: "inherit" },
@@ -301,7 +301,7 @@ function AuthScreen({ onAuth }) {
 // ─── LANG SELECT SCREEN ──────────────────────────────────────────────────────
 function LangSelectScreen({ onSelect, nativeLang }) {
   return (
-    <div style={{ minHeight: "100vh", minHeight: "100dvh", background: C.bg, display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 24px" }}>
+    <div style={{ minHeight: "100vh", minHeight: "100dvh", background: C.bg, display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 24px", paddingTop: "env(safe-area-inset-top)" }}>
       <GlobalStyles />
       <div style={{ marginBottom: 32 }} className="fade-in">
         <div style={{ ...T.display, color: C.text, marginBottom: 8, whiteSpace: "pre-line" }}>What language{"\n"}are you learning?</div>
@@ -601,7 +601,7 @@ function SettingsScreen({ user, onClose, onLogout, onDeleteAccount, saved, histo
   };
 
   const s = {
-    page: { position: "fixed", inset: 0, background: C.bg, zIndex: 300, overflowY: "auto", fontFamily: "inherit" },
+    page: { position: "fixed", inset: 0, background: C.bg, zIndex: 300, overflowY: "auto", fontFamily: "inherit", paddingTop: "env(safe-area-inset-top)" },
     section: { background: C.surface, borderRadius: 16, marginBottom: 12, overflow: "hidden" },
     row: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 16px", borderBottom: `1px solid ${C.border}`, cursor: "pointer" },
     input: { width: "100%", background: C.surface2, border: `1.5px solid ${C.border}`, borderRadius: 12, padding: "12px 16px", color: C.text, fontSize: 14, outline: "none", marginBottom: 10, fontFamily: "inherit" },
@@ -1043,7 +1043,7 @@ export default function App() {
       <GlobalStyles />
 
       {/* Header */}
-      <div style={{ padding: "48px 16px 0", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+      <div style={{ padding: "12px 16px 0", paddingTop: "max(48px, calc(env(safe-area-inset-top) + 12px))", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <Icons.Logo size={32} />
           <span style={{ ...T.h2, color: C.text }}>Wordy</span>
