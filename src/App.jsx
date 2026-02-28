@@ -108,7 +108,8 @@ const GlobalStyles = () => (
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
     html, body, #root { height: 100%; background: ${C.bg}; font-family: 'Plus Jakarta Sans', sans-serif; color: ${C.text}; }
-    body { overscroll-behavior: none; }
+    body { overscroll-behavior: none; padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
+    #root { padding-top: 0; }
     input, button, textarea { font-family: 'Plus Jakarta Sans', sans-serif; }
     ::-webkit-scrollbar { width: 4px; height: 4px; }
     ::-webkit-scrollbar-track { background: transparent; }
@@ -174,16 +175,10 @@ function AuthScreen({ onAuth }) {
   const handleGoogle = async () => {
     setError("");
     try {
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      if (isMobile) {
-        localStorage.setItem("wordy_google_redirect", "1");
-        await signInWithRedirect(auth, googleProvider);
-      } else {
-        const r = await signInWithPopup(auth, googleProvider);
-        onAuth(r.user, uiLang);
-      }
+      localStorage.setItem("wordy_google_redirect", "1");
+      await signInWithRedirect(auth, googleProvider);
     } catch (e) {
-      if (e.code !== "auth/popup-closed-by-user") setError("Google sign-in failed: " + e.code);
+      setError("Google sign-in failed: " + e.code);
     }
   };
 
