@@ -229,7 +229,7 @@ function AuthScreen({ onAuth }) {
           </div>
           <div style={{ ...T.display, color: C.text, marginBottom: 6 }}>Wordy</div>
           <div style={{ ...T.bodyM, color: C.text2 }}>
-            {mode === "login" ? "Welcome back 👋" : mode === "register" ? "Create your free account" : "Reset your password"}
+            {mode === "login" ? "Sign in to Wordy" : mode === "register" ? "Create your free account" : "Reset your password"}
           </div>
         </div>
 
@@ -1043,7 +1043,7 @@ export default function App() {
       <GlobalStyles />
 
       {/* Header */}
-      <div style={{ padding: "12px 16px 0", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+      <div style={{ padding: "48px 16px 0", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <Icons.Logo size={32} />
           <span style={{ ...T.h2, color: C.text }}>Wordy</span>
