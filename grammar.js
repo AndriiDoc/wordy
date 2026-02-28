@@ -6,7 +6,7 @@ export default async function handler(req, res) {
   const OPENAI_KEY = process.env.VITE_OPENAI_KEY;
   if (!OPENAI_KEY) return res.status(500).json({ error: "No API key" });
 
-  const LANG_NAMES = { en: "English", es: "Spanish", pt: "Portuguese", de: "German", fr: "French", uk: "Ukrainian", ru: "Russian" };
+  const LANG_NAMES = { en: "English", es: "Spanish", pt: "Portuguese", de: "German", fr: "French", uk: "Ukrainian" };
 
   const TENSES = {
     en: ["Present Simple","Present Continuous","Present Perfect","Present Perfect Continuous","Past Simple","Past Continuous","Past Perfect","Past Perfect Continuous","Future Simple (will)","Future Continuous","Future Perfect","Future Perfect Continuous","Going to (Future)","Conditional Present","Conditional Perfect","Imperative"],
