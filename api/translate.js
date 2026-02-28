@@ -59,7 +59,7 @@ For forms, include all relevant tenses for ${LANG_NAMES[toLang]}. If not a verb,
     const r = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${OPENAI_KEY}` },
-      body: JSON.stringify({ model: "gpt-4o", messages: [{ role: "user", content: prompt }], temperature: 0.3 }),
+      body: JSON.stringify({ model: "gpt-4o-mini", messages: [{ role: "user", content: prompt }], temperature: 0.3 }),
     });
     const d = await r.json();
     const content = d.choices?.[0]?.message?.content;

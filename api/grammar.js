@@ -6,7 +6,7 @@ export default async function handler(req, res) {
   const OPENAI_KEY = process.env.VITE_OPENAI_KEY;
   if (!OPENAI_KEY) return res.status(500).json({ error: "No API key" });
 
-  const LANG_NAMES = { en: "English", es: "Spanish", pt: "Portuguese", de: "German", fr: "French", uk: "Ukrainian", ru: "Russian" };
+  const LANG_NAMES = { en: "English", es: "Spanish", pt: "Portuguese", de: "German", fr: "French", uk: "Ukrainian" };
 
   const TENSES = {
     en: ["Present Simple","Present Continuous","Present Perfect","Present Perfect Continuous","Past Simple","Past Continuous","Past Perfect","Past Perfect Continuous","Future Simple (will)","Future Continuous","Future Perfect","Future Perfect Continuous","Going to (Future)","Conditional Present","Conditional Perfect","Imperative"],
@@ -67,7 +67,7 @@ If NOT a verb: { "isVerb": false, "reason": "explanation" }`;
     const r = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${OPENAI_KEY}` },
-      body: JSON.stringify({ model: "gpt-4o", messages: [{ role: "user", content: prompt }], temperature: 0.1, max_tokens: 4000 }),
+      body: JSON.stringify({ model: "gpt-4o-mini", messages: [{ role: "user", content: prompt }], temperature: 0.1, max_tokens: 2500 }),
     });
     const d = await r.json();
     const content = d.choices?.[0]?.message?.content;
